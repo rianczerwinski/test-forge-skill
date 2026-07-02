@@ -6,7 +6,7 @@ description: >-
 
 # test-forge
 
-A test is not defined by what it covers. It is defined by **what kind of truth it can establish.** Coverage percentage measures nothing; a 38k-line suite at 1:1 test-to-source can be 18% inert. The one question that matters: *for each thing under test, does a test exist that could actually fail if that thing were wrong?*
+A test is not defined by what it covers. It is defined by **what kind of truth it can establish.** Coverage percentage measures nothing: in one audited DSP suite, a 38k-line test body at ~1:1 test-to-source was ~18% inert. The one question that matters: *for each thing under test, does a test exist that could actually fail if that thing were wrong?*
 
 Every recurring test pathology is a **category collapse** — a test claiming a stronger kind of truth than its assertion can deliver. A smoke test wearing a correctness name. An equivalence check wearing an oracle name. A tautology wearing a property name. This skill names the kinds so the collapse becomes visible, then holds each module to the kind it needs.
 
@@ -17,7 +17,7 @@ Two modes, one spine:
 - **AUDIT** an existing suite — measure redundancy, mismeasurement, and pointless effort; produce a triaged findings catalog. → read [references/audit.md](references/audit.md).
 - **DESIGN / REFACTOR** a suite from first principles — assign required kinds per module, solve the oracle problems, restructure. → read [references/taxonomy.md](references/taxonomy.md) then [references/oracles.md](references/oracles.md).
 
-But the spine applies even to a single test you are about to write in passing. Before writing or running any test, name its kind and confirm its assertion could fail. That habit is the whole skill; the rest is scale.
+But the spine applies even to a single test you are about to write in passing. Before writing or running any test, name its kind and confirm its assertion could fail. That habit is the spine; the required-kinds rule, the oracle problems, and the audit lens are how it scales.
 
 ## The five kinds (the spine)
 
@@ -31,7 +31,9 @@ Ordered by strength of truth. Full treatment in [references/taxonomy.md](referen
 | **Contract** | Interface shape | The declared API | raises `FileNotFoundError`; serializes round-trip; routes speaker→text |
 | **Smoke** | Liveness | Nothing — it only proves it ran | `assert result is not None` — **fine, when the test name says smoke** |
 
-The kinds map onto established practice, which the skill leans on rather than reinventing: **Oracle** is the *test oracle problem* (oracles classed derived / specified / implicit); a differential oracle (impl-vs-reference) and a metamorphic oracle (relation across inputs) are the two workhorses. **Property** is property-based testing. The **negative-control** law below is the *mutation-testing* premise stated plainly. The audit smells map onto the van Deursen test-smell catalog (Missing Assert / Unknown Test, Assertion Roulette, Mock Overuse).
+These kinds are a **synthesis of established practice, not an ab-initio invention** — the skill leans on the literature rather than reinventing it. **Oracle** is the *test oracle problem*: in Barr et al.'s survey, oracles are *specified* (from a spec), *derived* (from another artifact — a reference implementation, a prior version, system properties), or *implicit* (heuristic). Note that a *differential* oracle (impl-vs-independent-reference) **and** a regression golden are *both* derived — what separates the strong oracle from the circular golden is the reference's **independence**, not the derived/specified label. A *metamorphic* oracle (a relation across inputs) needs no reference at all. **Property** is property-based testing. The **falsifiability** law below generalizes *mutation testing*. The audit smells map onto the van Deursen test-smell catalog (Missing Assert / Unknown Test, Assertion Roulette, Mock Overuse).
+
+The table partitions tests by **domain of claim** (liveness / interface / value-stability / value-invariant / value-correctness), so "ordered by strength of truth" is a rough guide, not a strict total order. Contract, in particular, is *oracle-backed on the interface domain* — its oracle is the declared API — which is why a **raised-exception-on-bad-input** is a Contract check while a **raised-exception-as-computed-result** is an Oracle check. Kinds compose on one module; they are not mutually exclusive slots.
 
 ## The required-kinds rule
 
@@ -39,7 +41,7 @@ A module cannot ship with only the weak kinds. Assign each source module its flo
 
 | Module character | Required floor |
 |---|---|
-| Numeric / algorithmic core (model port, DSP estimator, solver, transform) | **Oracle + Property** (+ a negative control) |
+| Numeric / algorithmic core (model port, DSP estimator, solver, transform) | **Oracle + Property** (+ a negative control) — *or* a logged `@oracle-gap` waiver |
 | Stateful logic (filter, scheduler, state machine) | **Property + Contract**, Oracle where truth is knowable |
 | IO / serialization / protocol / storage | **Contract + Smoke** |
 | CLI / cross-module integration | **Contract + Smoke** |
@@ -47,14 +49,18 @@ A module cannot ship with only the weak kinds. Assign each source module its flo
 
 A numeric module whose only coverage is Smoke has **no correctness coverage** — that is a hole, regardless of how many such tests exist. `scripts/kind-coverage.py` flags these mechanically once tests are marked by kind.
 
+**The floor is conditional, or it backfires.** A *hard* oracle mandate on a module whose oracle problem is genuinely unsolved (no reference, no analytic form, no independent generator) pressures exactly the pathology this skill condemns: to pass the gate, someone marks a self-generated snapshot `@oracle` and ships a circular golden. So an unobtainable oracle is a **documented `@oracle-gap` waiver** — a *tracked hole*, not a license to fake one — and the gate must verify oracles are **live** (via the negative-control requirement below), not merely present. A gate that counts `@oracle` markers without checking they can fail manufactures the collapse.
+
 ## The negative-control law (kills the can't-fail class)
 
 > **An assertion you have never seen fail is not known to be able to fail.**
 
-This is mutation testing compressed to one sentence. Enforce it two ways:
+This is the **falsifiability** premise; mutation testing is its automated, suite-wide form. Enforce it at two distinct scales — they are complements, not substitutes:
 
-- **Paired negative control** — for every accuracy or convergence claim, write a sibling test that *breaks the mechanism* and asserts the metric degrades. If disabling the thing under test still passes the test, the test was measuring nothing. (A model of this: a DOA-tolerance test that proves error *explodes* when re-estimation is removed.)
-- **Mutation testing** as the systematic backstop on the numeric core only (mutmut, cosmic-ray, Stryker) — flip `+`↔`-`, `<`↔`<=`, and require a test to catch it. This is what catches every conditional-guard and every over-wide tolerance automatically. Do not run it on IO/glue; the payoff is in the math.
+- **Paired negative control** (manual, per-oracle) — for every accuracy or convergence claim, write a sibling test that *breaks the mechanism* and asserts the metric degrades. If disabling the thing under test still passes the test, that *one* oracle was measuring nothing. (A model of this: a DOA-tolerance test that proves error *explodes* when re-estimation is removed.)
+- **Mutation testing** (automated, suite-wide) on the numeric core only (mutmut, cosmic-ray, Stryker) — mutate the *source* (flip `+`↔`-`, `<`↔`<=`) and require *some* test to catch it. This measures whether the whole suite would catch an arbitrary bug, which a per-oracle negative control does not. Do not run it on IO/glue; the payoff is in the math.
+
+A negative control proves *this* oracle is live; mutation testing measures the *suite's* sensitivity. Writing the former does not grant the latter.
 
 ## Audit mode, in brief
 
@@ -64,7 +70,7 @@ Run the redteam lens (full detectors, greps, and severity model in [references/a
 2. **Conditional-guard can't-fail** — every assertion sits inside `if <precondition>:`; when the precondition is not met, zero assertions run and the test goes green on exactly the failure it names.
 3. **In-test tautology** — the expected value is recomputed by the same code under test, or `assert x == x`.
 4. **Weakened-until-unfalsifiable** — tolerance far wider than the quantity's scale, `assert regime in (A, B)` covering N-of-M, or a range check that cannot fail (`0 <= az < 360`).
-5. **Mock-shadow** — the assertion checks a mock's own configured return value, or `assert_called_once` is the only signal; nothing real ran.
+5. **Mock-shadow** — the assertion checks a mock's own configured return value; nothing real ran. (Asserting a call *happened* — `assert_called_once` — is legitimate routing/contract, *not* this smell; the smell is asserting the fabricated return.)
 6. **Static-grep-as-behavior** — a `re.search` over source text dressed as a behavioral test.
 7. **Oracle-name-on-smoke** — the name says *localizes / correct / accurate* while the body asserts only `not None` / `len > 0`.
 

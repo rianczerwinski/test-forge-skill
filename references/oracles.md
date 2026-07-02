@@ -4,7 +4,7 @@ Correctness tests need an independent oracle. In most code the oracle is cheap (
 
 ## The oracle problem, named
 
-Determining the correct output for a given input is the **test oracle problem**. The literature classes oracles as *derived* (computed from the system's own model), *specified* (from a formal spec), or *implicit* (heuristic / human judgment). Two general strategies dominate when no direct oracle exists:
+Determining the correct output for a given input is the **test oracle problem**. Barr et al.'s survey classes oracles as *specified* (from a formal spec), *derived* (from some artifact **other than a spec** — a reference implementation, a prior version, other system properties), or *implicit* (heuristic / no explicit expected value). A caution on the word *derived*: it does **not** mean "the code's own output" — the *derived* class spans both the gold-standard differential/pseudo-oracle (a reference implementation, strong) and the prior-version regression golden (weak). What separates them is the reference's **independence from the code under test**, not the derived/specified label. Two general strategies dominate when no direct oracle exists:
 
 - **Differential testing** — run a second, independently-trusted implementation on the same input and compare. Requires a reference to exist.
 - **Metamorphic testing** — assert a *metamorphic relation* between the outputs of related inputs (scale the input, permute it, add a known offset) when you cannot state the absolute correct output. Requires no reference, only a known relation.
@@ -13,7 +13,7 @@ Both are stronger than any snapshot. A golden file is not an oracle unless the g
 
 ## Hard case 1 — the reference-oracle problem (model ports)
 
-A library that reimplements a model in a lighter substrate (numpy forward pass replacing a torch/ONNX model, a hand-rolled DSP kernel replacing a scipy call) makes exactly one correctness claim: **the reimplementation matches the reference.** The only oracle for that claim is the reference itself. The trap is to capture the reimplementation's own output as a "golden" and compare against it — that is circular; it detects change, never correctness, and it is the single most common way a numeric suite fools itself.
+A library that reimplements a model in a lighter substrate (numpy forward pass replacing a torch/ONNX model, a hand-rolled DSP kernel replacing a scipy call) makes exactly one correctness claim: **the reimplementation matches the reference.** The only oracle for that claim is the reference itself. The trap is to capture the reimplementation's own output as a "golden" and compare against it — that is circular; it detects change, never correctness, and it is a common way a numeric suite fools itself.
 
 Resolutions, as a decision fork (surface it; do not pick silently):
 

@@ -1,6 +1,6 @@
 # Worked example — auditing a suite
 
-A real audit of a numpy-only DSP/ML library's test suite. Shows the input, the method, and the output shape.
+A condensed, illustrative walkthrough of a real audit of a numpy-only DSP/ML library's test suite — findings are paraphrased to show the *method and output shape*, not reproduced with their original file:line citations (the real catalog carried those). Treat the specific claims here as representative, not as a checkable record.
 
 ## Input
 

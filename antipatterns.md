@@ -16,7 +16,10 @@ def test_output_unchanged():
     assert_allclose(EcapaNumpy().embed(x, seed=42), load("golden/ecapa.npz"))
 @pytest.mark.oracle
 def test_matches_reference():          # the real correctness gate
-    assert cosine(EcapaNumpy().embed(x), onnx_reference.embed(x)) > 0.999
+    # Compare element-wise to the independent ONNX output with a tolerance that is the
+    # numpy-vs-ONNX float divergence budget (fp32 accumulation order), not an eyeballed
+    # cosine floor — a high cosine can still hide a per-dim bias a downstream stage sees.
+    assert_allclose(EcapaNumpy().embed(x), onnx_reference.embed(x), atol=PORT_FP_BUDGET)
 ```
 Why it flips: the golden was produced by the code under test, so the exact-match test can only detect change — the oracle claim requires an *independent* reference (the ONNX run), not the code's own captured output.
 Prevents: a change-detector masquerading as a correctness proof, so a wrong-but-stable implementation passes forever.
@@ -36,7 +39,7 @@ def test_bootstrap_converges():
     assert bootstrap.phase >= EKF_TRACKING           # the precondition IS the claim
     assert position_error(bootstrap.geometry) < 0.05
 ```
-Why it flips: wrapping the assertions in `if precondition:` means the exact failure the test names — non-convergence — produces zero assertions and a green pass; asserting the precondition unconditionally makes it falsifiable.
+Why it flips: the guarded condition *is* the behavior under test, so wrapping the assertions in `if precondition:` means the exact failure the test names — non-convergence — produces zero assertions and a green pass; asserting the precondition unconditionally makes it falsifiable. (Carve-out: guarding on a genuinely *environmental* precondition — hardware absent, optional dep missing — is legitimate, but express it as `pytest.skip(...)`, not a silent `if`, so a skip is visible where a guarded no-op is not.)
 Prevents: false green on the specific behavior under test.
 
 ### In-test tautology
@@ -53,7 +56,7 @@ def test_tdoa_matches_geometry():
     tdoa = estimate_tdoa(signal_a, signal_b)   # the real code
     assert abs(tdoa - (d_b - d_a) / c) < 1e-6  # expected from independent geometry
 ```
-Why it flips: the wrong version never calls the code under test — it recomputes one expression and subtracts it from itself; the right version runs the estimator and checks it against a value derived independently from geometry.
+Why it flips: the discriminating feature is *independence of the compared-against value*, not merely "calls the code." The wrong version derives `expected` from the same expression as `actual` (so it would pass even if the estimator were called — `f(x) == f(x)` is also a tautology); the right version checks the estimator's output against a value derived independently, from geometry.
 Prevents: a test that passes by construction and would survive deleting the entire module it names.
 
 ### Weakened-until-unfalsifiable
@@ -66,10 +69,14 @@ def test_localization_accuracy():
 ✅ Right:
 ```python
 def test_localization_accuracy():
-    az = localize(scene_with_source_at(45.0)).azimuth
-    assert abs(az - 45.0) < 2.0     # planted ground truth, tolerance at the noise floor
+    scene = scene_with_source_at(45.0, snr_db=20)
+    az = localize(scene).azimuth
+    # Tolerance derived, not eyeballed: the array's angular resolution at this aperture
+    # and SNR (state the derivation in the docstring), so the bound is tight-to-the-floor
+    # rather than a decorative "< 2.0".
+    assert abs(az - 45.0) < expected_doa_resolution(scene)
 ```
-Why it flips: the range `0 ≤ az < 360` is the definition of an azimuth, so it holds regardless of correctness; comparing to a *planted* 45° with a tight tolerance is the accuracy claim the name makes.
+Why it flips: the range `0 ≤ az < 360` is the definition of an azimuth, so it holds regardless of correctness; comparing to a *planted* 45° with a tolerance derived from the array's resolution is the accuracy claim the name makes.
 Prevents: an "accuracy" test that a random-number generator would pass.
 
 ### Mock-shadow
@@ -78,17 +85,22 @@ Prevents: an "accuracy" test that a random-number generator would pass.
 def test_separates_sources():
     model = MagicMock(return_value=torch.randn(3, 16000))
     out = separate(audio, model)
-    assert out.shape[0] == 3            # asserts the mock's own configured shape
-    model.assert_called_once()
+    assert out.shape[0] == 3            # THE SMELL: asserts the mock's own configured shape
+    model.assert_called_once()          # fine on its own (routing/contract) — NOT the smell here
 ```
 ✅ Right:
 ```python
 def test_separates_sources():
     out = separate(two_speaker_mix, real_numpy_separator)   # real path
-    assert si_sdr(out[0], ref_speaker_0) > 8.0              # a real separation-quality metric
+    # Source-separation output order is arbitrary (the BSS permutation problem), so score
+    # under the best assignment — a fixed out[0]→ref_0 would flake on a CORRECT separator.
+    best = max(mean_si_sdr(perm, refs) for perm in permutations(out))
+    # Threshold anchored, not magic: require a stated margin over the unseparated mix
+    # (the negative control), not an eyeballed dB. Both numbers live in the test's docstring.
+    assert best > si_sdr_of_mix(refs) + MIN_SEPARATION_GAIN_DB
 ```
-Why it flips: the wrong version's assertion traces back to the value handed to the mock, so nothing real ran; the right version drives the actual separator and measures the property that defines success.
-Prevents: a green test over a component that was never executed.
+Why it flips: the wrong version's load-bearing assertion (`out.shape[0] == 3`) traces back to the value handed to the mock, so nothing real ran — note the `assert_called_once()` is *not* the defect (verifying a call happened is legitimate routing/contract). The right version drives the real separator, scores permutation-invariantly, and anchors the bar to a measured baseline.
+Prevents: a green test over a component that was never executed — and, in the fix, a flaky test that fails on a correct-but-reordered separator or passes on an eyeballed threshold.
 
 ### Static-grep-as-behavior
 ❌ Wrong:

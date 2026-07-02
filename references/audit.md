@@ -25,13 +25,13 @@ Every assertion sits inside `if <precondition>:` — when the precondition is no
 The assertion was loosened until it cannot fail: a tolerance far wider than the quantity's scale (`abs(x) < 1000` on a quantity near 1), an `in (A, B)` membership covering N-of-M outcomes, a range check that is always true (`0 <= azimuth < 360`). **Detect:** compare tolerance to the expected magnitude; flag membership asserts and full-range bounds. **Fix:** tighten to the noise floor, or assert the specific expected value.
 
 ### 5. Mock-shadow
-The assertion checks a mock's own configured return value, or `assert_called_once` is the *only* signal, so nothing real executed. **Detect:** the asserted value traces back to a `MagicMock(return_value=…)` set up in the same test. **Distinguish from legitimate contract tests:** asserting *which* handler was called with *which* payload (routing) is fine; asserting that the mock returned what you told it to return is not. **Fix:** exercise the real path, or assert on the logic the production code applies to the mock's output.
+The assertion checks a mock's own configured return value, so nothing real executed. **Detect:** the asserted value traces back to a `MagicMock(return_value=…)` set up in the same test. **Distinguish from legitimate contract tests:** asserting *which* handler was called with *which* payload (routing — including a bare `assert_called_once`) is a valid contract check; asserting that the mock returned what you told it to return is the smell. Three-way split: assert-the-mock's-return = shadow; assert-it-was-called = contract; assert-a-real-transform-of-the-mock's-output = legitimate. **Fix:** exercise the real path, or assert on the logic the production code applies to the mock's output.
 
 ### 6. Static-grep-as-behavior
 A `re.search` / substring scan over source text, dressed as a behavioral test — passes or fails on formatting, not behavior. **Detect:** the test reads a `.py`/source file and regexes it. **Fix:** move to a CI lint, or write a real behavioral assertion.
 
 ### 7. Oracle-name-on-smoke
-The name promises correctness (`test_localization_accuracy`, `test_separates_speakers`) while the body asserts only `not None` / `len > 0`. The most common collapse and the easiest to miss because the name reads as coverage. **Detect:** compare the strongest word in the test name to the strongest assertion in the body. **Fix:** rename to `_smoke`, or add the assertion the name promises.
+The name promises correctness (`test_localization_accuracy`, `test_separates_speakers`) while the body asserts only `not None` / `len > 0`. A common collapse, and easy to miss because the name reads as coverage. **Detect:** compare the strongest word in the test name to the strongest assertion in the body. **Fix:** rename to `_smoke`, or add the assertion the name promises.
 
 ## Redundancy patterns (the same truth, twice)
 
