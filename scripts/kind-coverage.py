@@ -128,15 +128,21 @@ def main() -> int:
 
     gaps: list[str] = []
     unmarked: list[str] = []
+    unclassified: list[str] = []  # matched no bucket → NO floor applies → the gate is blind to it
     src_modules = [p for p in args.src.rglob("*.py") if p.name != "__init__.py"]
     for mod in sorted(src_modules):
         stem = str(mod.relative_to(args.src).with_suffix("")) if args.map_strategy == "path" else mod.stem
         bucket = bucket_of(str(mod), DEFAULT_BUCKETS)
-        need = required.get(bucket, set())
         present = have.get(stem, set())
         if "UNMARKED" in present:
             unmarked.append(f"{stem}  (has tests, none declare a kind)")
-        missing = need - present
+        if bucket not in required:
+            # No floor: the gate cannot flag this module. Surface it — a numeric core
+            # module in a dir whose name lacks a bucket keyword lands here and would
+            # otherwise escape the gate SILENTLY (a false all-clear).
+            unclassified.append(f"{stem}  (bucket '{bucket}' has no required floor — assign one if this is core)")
+            continue
+        missing = required[bucket] - present
         if missing:
             gaps.append(f"{stem}  [{bucket}]  missing: {', '.join(sorted(missing))}  (has: {', '.join(sorted(present - {'UNMARKED'})) or 'none'})")
 
@@ -151,7 +157,12 @@ def main() -> int:
         for g in gaps:
             print(f"  {g}")
     else:
-        print("## all buckets meet their required-kinds floor")
+        print("## all bucketed modules meet their required-kinds floor")
+    if unclassified:
+        print(f"\n## {len(unclassified)} module(s) the gate cannot see (no bucket matched):")
+        for u in unclassified:
+            print(f"  {u}")
+        print("  → these are NOT 'all clear' — they simply have no floor. Bucket the core ones.")
 
     if args.gate and (gaps or unmarked):
         return 1

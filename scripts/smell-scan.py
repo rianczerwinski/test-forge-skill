@@ -1,170 +1,333 @@
 #!/usr/bin/env python3
-"""Seed a test-suite audit with mechanical category-collapse candidates.
+"""Seed a test-suite audit with category-collapse candidates — AST-based, context-aware.
 
-Heuristic, not a judge: every hit is a *candidate* a human (or an audit agent)
-must confirm — the patterns intentionally over-flag, because a false positive
-costs one glance while a false negative hides a mismeasuring test. Output is
-grouped by detector with file:line so it can be pasted into an audit rubric.
+Heuristic, not a judge: every hit is a *candidate* a human (or an audit agent) must
+confirm. But unlike a line-regex scanner, this reads each test function's structure,
+so it can apply the one rule that separates a smell from a legitimate test:
 
-Detectors map to references/audit.md §"The seven category-collapse detectors".
-Only the mechanically-detectable ones are here; circular-golden and
-in-test-tautology need semantic reads and are left to the human pass.
+    A weak assertion (liveness / range / membership / mock-called) is a SMELL only
+    when it is the test's SOLE signal, or when the test NAME/marker claims a stronger
+    kind than the assertion delivers. The same assertion inside a @pytest.mark.contract
+    test, or alongside a real assertion, is legitimate — and is NOT flagged.
+
+That context-sensitivity is why this is an AST pass, not a grep: it needs per-function
+assertion scope and the test's declared kind. Regex flags `assert 0<=p<=1` everywhere;
+this flags it only when it stands alone in a test that isn't declared a contract.
+
+An "assertion" here is both the `assert` keyword AND the assertion-method idioms real
+suites use — `np.testing.assert_allclose`, `self.assertEqual`, `mock.assert_called_once`
+— detected as any call whose name/attribute starts with "assert". Missing these would
+blind the scanner to most numpy/unittest tests.
+
+Detectors (map to references/audit.md §"The seven category-collapse detectors"):
+  2  conditional-guard can't-fail  — ALL assertions nested in an `if` (scope-aware:
+                                     catches guards whose body also has setup/loops)
+  3  in-test tautology             — assert X <op> X, or assert_allclose(x, x)
+  4  weakened-until-unfalsifiable  — sole/so-claimed weak assert: full-range bound,
+                                     membership, or loose tolerance (atol/rtol/abs()<N)
+  5  mock-shadow                   — asserted value traces to a MagicMock(return_value),
+                                     or `.assert_called*` is the SOLE signal
+  7  oracle-name-on-smoke          — strong-claim name, but every assertion is liveness
+
+Not mechanically detectable (still a human/agent read): circular goldens (needs to know
+how the golden was generated) and episode-file redundancy (needs cross-file semantics).
 
 Usage:
-    python3 smell-scan.py <tests_dir> [--ext .py]
+    smell-scan.py <path> [<path> ...]        # files and/or dirs; dirs scanned recursively
+    smell-scan.py tests/ --ext .py
 
-Language note: the regexes target Python/pytest idioms. For jest/vitest/go,
-adjust ASSERT_RE and the guard/range patterns — the detector *concepts* are
-language-agnostic; only the surface syntax here is Python.
+Language note: AST parsing is Python-only. The detector *concepts* are language-agnostic;
+for jest/go/rust, port the classifier — but the scope-aware structure is the point.
 """
 from __future__ import annotations
 
 import argparse
-import re
+import ast
 import sys
 from pathlib import Path
 
-# An assertion line — pytest bare assert or unittest self.assert*.
-ASSERT_RE = re.compile(r"^\s*(assert\b|self\.assert)")
-
-# Detector 4a: full-range bound that cannot fail. A membership/range check whose
-# bounds are the definition of the quantity (0<=az<360, 0<=p<=1 on a probability).
-# Flags comparisons chained around a value with numeric literals on both sides.
-RANGE_ALWAYS_TRUE = re.compile(
-    r"assert\s+-?\d+(?:\.\d+)?\s*<=?\s*\w+\s*<=?\s*-?\d+(?:\.\d+)?"
+# A test name whose word claims a stronger kind than a liveness assert can deliver.
+STRONG_NAME_WORDS = (
+    "accura", "correct", "matches", "recover", "localiz", "separat", "equival",
+    "converg", "exact", "precise", "identif",
 )
-
-# Detector 4b: membership assert (`in (A, B)`) — N-of-M outcomes, often weakened.
-MEMBERSHIP = re.compile(r"assert\s+\w+(?:\.\w+)*\s+in\s+[\(\[{]")
-
-# Detector 4c: suspiciously wide tolerance. atol/rtol/abs(...) < BIG.
-# 10.0 is the threshold: DSP/embedding quantities are typically O(1)–O(10), so a
-# tolerance >= 10 on a comparison is nearly always unfalsifiable. Tune per domain.
-WIDE_TOL = re.compile(r"(atol|rtol)\s*=\s*(\d+(?:\.\d+)?)")
-WIDE_TOL_THRESHOLD = 1.0
-
-# Detector 5: mock-shadow — assert on *_called* only, or a MagicMock return_value.
-MOCK_CALLED = re.compile(r"assert.*\.(assert_called|called|call_count)\b|\.assert_called")
-MOCK_RETURN = re.compile(r"(MagicMock|Mock)\s*\(\s*return_value")
-
-# Detector 6: static-grep-as-behavior — reading source text and regexing it.
-STATIC_GREP = re.compile(r"\.read_text\(\)|re\.(search|match|findall)\(")
-
-# Detector 7: oracle-name-on-smoke. A test whose name promises correctness but
-# whose body's only assertion is a liveness check. Handled with a two-pass scan.
-STRONG_NAME = re.compile(
-    r"def (test_\w*(accura|correct|matches|recover|localiz|separat|equival|converg)\w*)"
-)
-SMOKE_ASSERT = re.compile(
-    r"assert\s+\w[\w.]*\s+is\s+not\s+None\s*$|assert\s+len\([^)]+\)\s*(>=?\s*[01]|!=\s*0)\s*$"
-)
-
-# Detector 2: conditional-guard can't-fail — an `if` whose body's only statements
-# are assertions. Detected structurally in scan_guards() by indentation.
-IF_RE = re.compile(r"^(\s*)if\s+.+:\s*$")
+# Markers that DECLARE a kind. A weak assertion under an explicit contract/property/
+# smoke marker is legitimate for that kind and must not be flagged as a collapse.
+KIND_MARKERS = {"oracle", "property", "regression", "contract", "smoke"}
+# Approximate-equality assertion methods that carry a tolerance kwarg.
+TOL_ASSERTS = {"assert_allclose", "assert_array_almost_equal", "assert_almost_equal", "assertAlmostEqual"}
+# Equality assertion methods whose first two args, if identical, form a tautology.
+EQ_ASSERTS = {"assert_allclose", "assert_array_equal", "assert_array_almost_equal",
+              "assert_almost_equal", "assert_equal", "assertEqual", "assertAlmostEqual"}
+# atol/rtol at or above this is "wide" for O(1)–O(10) DSP/embedding quantities. Domain
+# dependent — hence candidate-only, and only when the test isn't a declared weak kind.
+WIDE_TOL = 1.0
+# abs(a-b) < N with N at or above this is a loose absolute tolerance for the same reason.
+WIDE_ABS = 10.0
 
 
-def scan_line_patterns(path: Path, lines: list[str]) -> list[tuple[int, str, str]]:
-    hits: list[tuple[int, str, str]] = []
-    for i, line in enumerate(lines, 1):
-        if RANGE_ALWAYS_TRUE.search(line):
-            hits.append((i, "4-unfalsifiable-range", line.strip()))
-        if MEMBERSHIP.search(line):
-            hits.append((i, "4-membership-assert", line.strip()))
-        for m in WIDE_TOL.finditer(line):
-            if float(m.group(2)) >= WIDE_TOL_THRESHOLD:
-                hits.append((i, "4-wide-tolerance", line.strip()))
-        if MOCK_CALLED.search(line) or MOCK_RETURN.search(line):
-            hits.append((i, "5-mock-shadow", line.strip()))
-        if STATIC_GREP.search(line) and "read_text" in line:
-            hits.append((i, "6-static-grep", line.strip()))
-    return hits
+def _callee_name(call: ast.Call) -> str:
+    f = call.func
+    if isinstance(f, ast.Attribute):
+        return f.attr
+    if isinstance(f, ast.Name):
+        return f.id
+    return ""
 
 
-def scan_guards(lines: list[str]) -> list[tuple[int, str, str]]:
-    """Flag an `if` whose entire indented body is assertions (or pass) — the
-    conditional-guard can't-fail shape. Approximate: looks one block ahead."""
-    hits: list[tuple[int, str, str]] = []
-    for i, line in enumerate(lines):
-        m = IF_RE.match(line)
-        if not m:
+def _is_assert_call(node: ast.expr) -> bool:
+    # np.testing.assert_allclose(...), self.assertEqual(...), mock.assert_called_once()
+    return isinstance(node, ast.Call) and _callee_name(node).startswith("assert")
+
+
+class Unit:
+    """One assertion: either an `assert` statement or an assertion-method call."""
+    __slots__ = ("node", "lineno", "in_guard", "is_kw")
+
+    def __init__(self, node, lineno, in_guard, is_kw):
+        self.node = node          # ast.Assert  (is_kw) or ast.Call
+        self.lineno = lineno
+        self.in_guard = in_guard
+        self.is_kw = is_kw
+
+    @property
+    def test(self):
+        return self.node.test if self.is_kw else self.node
+
+
+def _is_none_check(t: ast.expr) -> bool:
+    return isinstance(t, ast.Compare) and any(
+        isinstance(op, (ast.Is, ast.IsNot)) and isinstance(c, ast.Constant) and c.value is None
+        for op, c in zip(t.ops, t.comparators)
+    )
+
+
+def _is_len_liveness(t: ast.expr) -> bool:
+    if not (isinstance(t, ast.Compare) and len(t.ops) == 1):
+        return False
+    left, right = t.left, t.comparators[0]
+    if not (isinstance(left, ast.Call) and isinstance(left.func, ast.Name) and left.func.id == "len"):
+        return False
+    return isinstance(right, ast.Constant) and right.value in (0, 1)
+
+
+def _is_full_range(t: ast.expr) -> bool:
+    if not (isinstance(t, ast.Compare) and len(t.ops) == 2):
+        return False
+    lo, hi = t.left, t.comparators[1]
+    return (
+        all(isinstance(op, (ast.Lt, ast.LtE)) for op in t.ops)
+        and isinstance(lo, ast.Constant) and isinstance(lo.value, (int, float))
+        and isinstance(hi, ast.Constant) and isinstance(hi.value, (int, float))
+    )
+
+
+def _is_membership(t: ast.expr) -> bool:
+    return isinstance(t, ast.Compare) and len(t.ops) == 1 and isinstance(t.ops[0], ast.In)
+
+
+def _is_wide_abs_tol(t: ast.expr) -> bool:
+    if not (isinstance(t, ast.Compare) and len(t.ops) == 1 and isinstance(t.ops[0], (ast.Lt, ast.LtE))):
+        return False
+    left, right = t.left, t.comparators[0]
+    if not (isinstance(left, ast.Call) and isinstance(left.func, ast.Name) and left.func.id == "abs"):
+        return False
+    return isinstance(right, ast.Constant) and isinstance(right.value, (int, float)) and abs(right.value) >= WIDE_ABS
+
+
+def unit_liveness(u: Unit) -> bool:
+    if u.is_kw:
+        return _is_none_check(u.test) or _is_len_liveness(u.test)
+    return _callee_name(u.node) in ("assertIsNotNone", "assertIsNone")
+
+
+def unit_mock_called(u: Unit) -> bool:
+    if u.is_kw:
+        return any(isinstance(s, ast.Attribute) and (s.attr.startswith("assert_called")
+                   or s.attr in ("called", "call_count")) for s in ast.walk(u.test))
+    return _callee_name(u.node).startswith("assert_called")
+
+
+def unit_tautology(u: Unit):
+    if u.is_kw:
+        t = u.test
+        if isinstance(t, ast.Compare) and len(t.ops) == 1 and ast.dump(t.left) == ast.dump(t.comparators[0]):
+            return True
+        return False
+    if _callee_name(u.node) in EQ_ASSERTS and len(u.node.args) >= 2:
+        return ast.dump(u.node.args[0]) == ast.dump(u.node.args[1])
+    return False
+
+
+def unit_wide_tol(u: Unit) -> bool:
+    if u.is_kw:
+        return _is_wide_abs_tol(u.test)
+    if _callee_name(u.node) in TOL_ASSERTS:
+        for kw in u.node.keywords:
+            if kw.arg in ("atol", "rtol") and isinstance(kw.value, ast.Constant) \
+                    and isinstance(kw.value.value, (int, float)) and kw.value.value >= WIDE_TOL:
+                return True
+    return False
+
+
+class _Fn:
+    def __init__(self, node: ast.FunctionDef):
+        self.name = node.name
+        self.markers = self._markers(node)
+        self.units: list[Unit] = []
+        for stmt, in_guard in self._walk(node.body, False):
+            if isinstance(stmt, ast.Assert):
+                self.units.append(Unit(stmt, stmt.lineno, in_guard, True))
+            elif isinstance(stmt, ast.Expr) and _is_assert_call(stmt.value):
+                self.units.append(Unit(stmt.value, stmt.lineno, in_guard, False))
+
+    @staticmethod
+    def _markers(node: ast.FunctionDef) -> set[str]:
+        out: set[str] = set()
+        for d in node.decorator_list:
+            for sub in ast.walk(d):
+                if isinstance(sub, ast.Attribute) and sub.attr in KIND_MARKERS:
+                    out.add(sub.attr)
+        return out
+
+    def _walk(self, body, in_guard):
+        # Yield every statement with whether it sits under an `if` (any depth). An `if`
+        # guards both its body and its else; loops/with/try preserve the inherited state.
+        for stmt in body:
+            yield stmt, in_guard
+            if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue  # don't descend into nested defs
+            guard = in_guard or isinstance(stmt, ast.If)
+            for field in ("body", "orelse", "finalbody"):
+                sub = getattr(stmt, field, None)
+                if sub:
+                    yield from self._walk(sub, guard)
+            for handler in getattr(stmt, "handlers", []):
+                yield from self._walk(handler.body, guard)
+
+    def claims_strong(self) -> bool:
+        if "oracle" in self.markers:
+            return True
+        low = self.name.lower()
+        return any(w in low for w in STRONG_NAME_WORDS)
+
+    def declares_weak_kind(self) -> bool:
+        return bool(self.markers & {"contract", "property", "smoke", "regression"})
+
+
+def scan_file(path: Path):
+    findings = []
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    except (OSError, UnicodeDecodeError, SyntaxError) as err:
+        print(f"warn: skip {path}: {err}", file=sys.stderr)
+        return findings
+
+    def add(lineno, detector, name, evidence):
+        findings.append((f"{path}:{lineno}", detector, name, evidence))
+
+    for node in ast.walk(tree):
+        if not (isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test")):
             continue
-        indent = len(m.group(1))
-        body: list[str] = []
-        for nxt in lines[i + 1 :]:
-            if not nxt.strip():
-                continue
-            nxt_indent = len(nxt) - len(nxt.lstrip())
-            if nxt_indent <= indent:
-                break
-            body.append(nxt.strip())
-        if body and all(
-            b.startswith(("assert", "self.assert", "pass")) for b in body
+        fn = _Fn(node)
+        if not fn.units:
+            continue
+
+        # 2 — conditional-guard can't-fail: every assertion is inside an `if`.
+        if all(u.in_guard for u in fn.units):
+            add(node.lineno, "2-conditional-guard", fn.name,
+                "all assertions nested in an if — the non-precondition path runs zero asserts")
+
+        # 3 — tautology (any unit)
+        for u in fn.units:
+            if unit_tautology(u):
+                add(u.lineno, "3-tautology", fn.name, "assertion compares a value to itself")
+
+        # 7 — oracle-name-on-smoke: strong name/marker, every assertion liveness-only
+        if fn.claims_strong() and all(unit_liveness(u) for u in fn.units):
+            add(node.lineno, "7-oracle-name-on-smoke", fn.name,
+                "name/marker claims correctness; every assertion is liveness (not-None / len)")
+
+        # 4 & 5 — weak SOLE assertion, gated by declared kind (this kills the FP wave)
+        if len(fn.units) == 1 and not fn.declares_weak_kind():
+            u = fn.units[0]
+            if u.is_kw and _is_full_range(u.test):
+                why = "claims accuracy" if fn.claims_strong() else "the sole assertion"
+                add(u.lineno, "4-unfalsifiable-range", fn.name,
+                    f"full-range bound is {why} — cannot fail on correctness")
+            elif u.is_kw and _is_membership(u.test):
+                add(u.lineno, "4-membership", fn.name, "membership is the sole assertion — N-of-M, weak")
+            # NB: a sole `mock.assert_called_once()` is routing verification = a legitimate
+            # (if thin) contract, NOT mock-shadow. The real shadow is asserting the mock's
+            # configured RETURN value, caught by 5-mock-shadow-return below. If such a
+            # contract test under-covers a numeric module, kind-coverage.py flags it, not this.
+
+        # 4 — loose tolerance (abs()<N or assert_allclose atol/rtol), outside weak kinds
+        if not fn.declares_weak_kind():
+            for u in fn.units:
+                if unit_wide_tol(u):
+                    add(u.lineno, "4-loose-tolerance", fn.name,
+                        "tolerance (abs()<N or atol/rtol) likely far above the noise floor — confirm vs scale")
+
+        # 5 — mock-shadow proper: an assertion references a MagicMock(return_value=...)
+        mock_names = set()
+        for stmt in ast.walk(node):
+            if isinstance(stmt, ast.Assign) and isinstance(stmt.value, ast.Call):
+                callee = getattr(stmt.value.func, "id", getattr(stmt.value.func, "attr", ""))
+                if callee in ("MagicMock", "Mock") and any(k.arg == "return_value" for k in stmt.value.keywords):
+                    mock_names.update(t.id for t in stmt.targets if isinstance(t, ast.Name))
+        if mock_names and any(
+            isinstance(s, ast.Name) and s.id in mock_names
+            for u in fn.units for s in ast.walk(u.test)
         ):
-            hits.append((i + 1, "2-conditional-guard", line.strip()))
-    return hits
+            add(node.lineno, "5-mock-shadow-return", fn.name,
+                f"assertion references MagicMock(return_value=...) ({', '.join(sorted(mock_names))}) — may check the configured return")
+
+    return findings
 
 
-def scan_name_vs_body(lines: list[str]) -> list[tuple[int, str, str]]:
-    """Detector 7: a strongly-named test whose asserts are all liveness."""
-    hits: list[tuple[int, str, str]] = []
-    text = "".join(lines)
-    for nm in STRONG_NAME.finditer(text):
-        start = text[: nm.start()].count("\n") + 1
-        # gather the function body's assertion lines until the next def/class
-        body_lines = []
-        for j in range(start, len(lines)):
-            ln = lines[j]
-            if j > start and re.match(r"^\s*(def |class )", ln):
-                break
-            if ASSERT_RE.match(ln):
-                body_lines.append(ln.strip())
-        if body_lines and all(SMOKE_ASSERT.search(b) for b in body_lines):
-            hits.append((start, "7-oracle-name-on-smoke", nm.group(1)))
-    return hits
+def gather_files(paths, ext):
+    files = []
+    for p in paths:
+        if p.is_dir():
+            files.extend(sorted(p.rglob(f"*{ext}")))
+        elif p.is_file():
+            files.append(p)
+        else:
+            print(f"warn: {p} is neither file nor dir", file=sys.stderr)
+    return files
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Mechanical test-smell candidate scanner.")
-    ap.add_argument("tests_dir", type=Path)
+    ap = argparse.ArgumentParser(description="AST-based, context-aware test-smell candidate scanner.")
+    ap.add_argument("paths", nargs="+", type=Path, help="test files and/or directories")
     ap.add_argument("--ext", default=".py")
     args = ap.parse_args()
 
-    if not args.tests_dir.exists():
-        print(f"error: {args.tests_dir} does not exist", file=sys.stderr)
-        return 1
+    files = gather_files(args.paths, args.ext)
+    if not files:
+        # Loud failure, not a false all-clear: pointing at an empty/wrong path must error.
+        print(f"error: no *{args.ext} files found under {', '.join(map(str, args.paths))}", file=sys.stderr)
+        return 2
 
     grouped: dict[str, list[str]] = {}
-    files = sorted(args.tests_dir.rglob(f"*{args.ext}"))
     for path in files:
-        try:
-            lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
-        except (OSError, UnicodeDecodeError) as err:
-            print(f"warn: skip {path}: {err}", file=sys.stderr)
-            continue
-        flat = [ln.rstrip("\n") for ln in lines]
-        hits = (
-            scan_line_patterns(path, flat)
-            + scan_guards(flat)
-            + scan_name_vs_body(lines)
-        )
-        for lineno, detector, evidence in hits:
-            grouped.setdefault(detector, []).append(
-                f"{path}:{lineno}  {evidence[:100]}"
-            )
+        for loc, detector, name, evidence in scan_file(path):
+            grouped.setdefault(detector, []).append(f"{loc}  {name} — {evidence}")
 
     if not grouped:
-        print("no mechanical smell candidates found (semantic detectors still need a human pass)")
+        print(f"no mechanical smell candidates across {len(files)} file(s). "
+              "Circular goldens and episode-file redundancy still need a human/agent read.")
         return 0
 
     total = sum(len(v) for v in grouped.values())
-    print(f"# {total} candidate(s) across {len(files)} files — CONFIRM each; heuristics over-flag.\n")
+    print(f"# {total} candidate(s) across {len(files)} file(s) — CONFIRM each; heuristics over-flag.\n")
     for detector in sorted(grouped):
         print(f"## {detector}  ({len(grouped[detector])})")
         for entry in grouped[detector]:
             print(f"  {entry}")
         print()
-    print("Not detected mechanically (need a human/agent read): circular goldens, in-test tautologies, episode-file redundancy.")
+    print("Not detected mechanically (need a human/agent read): circular goldens, episode-file redundancy.")
     return 0
 
 
