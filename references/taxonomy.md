@@ -1,107 +1,102 @@
-# The five kinds, in depth
+# Truth-kind vocabulary
 
-The taxonomy is the whole method. Everything else — the audit lens, the required-kinds rule, the refactor sequence — is downstream of naming what kind of truth a test establishes.
+Truth kind answers one question inside a proof obligation: **what can this assertion legitimately establish?** It does not answer which architectural seam to cross, how realistic the fixture should be, how often the test should run, or whether the test is selected in CI.
 
 ## Table of contents
 
-1. Why kind, not coverage
-2. The five kinds, each in full
-3. The required-kinds matrix
-4. The refactor sequence (Phases 0–4)
-5. Structure: mirror source, not episodes
+1. The five functional kinds
+2. Orthogonal failure surfaces
+3. Module-character heuristics
+4. Classification discipline
+5. Test-tree structure
 
----
+## 1. The five functional kinds
 
-## 1. Why kind, not coverage
+### Oracle — correctness
 
-Coverage answers "was this line executed by a test." It does not answer "would a test fail if this line were wrong." The gap between those two is where inert tests live: a line can be covered by a test whose assertion cannot fail. Kind closes the gap by forcing every test to declare the *strength* of truth it delivers, and forcing every module to carry a floor.
+An Oracle test compares behavior with an independent source of truth. Independence is load-bearing: if expected and actual derive from the same production mechanism, the comparison is self-consistency or regression, not correctness.
 
-The failure this prevents is **category collapse**: a test written as a smoke check but named and counted as a correctness check. Collapse is invisible under a coverage lens (the line is green) and obvious under a kind lens (the module has zero Oracle tests). Name the kinds and the holes surface.
+Legitimate authorities include:
 
-## 2. The five kinds
+- a reference implementation whose relevant mechanism is independently maintained;
+- an explicit specification or protocol example;
+- a hand-computed value;
+- an analytic closed form;
+- ground truth planted by an independent generator;
+- a metamorphic relation whose transformation is known independently of the implementation.
 
-### Oracle — establishes correctness
+Read [oracles.md](oracles.md) when independence, provenance, tolerance, or reference cost is nontrivial.
 
-An oracle test compares output to an *independent* source of truth. Independence is the entire point: if the "expected" value comes from the same code that produced the "actual" value, it is not an oracle. Four legitimate oracles:
+### Property — soundness across a domain
 
-- **Reference implementation** (differential oracle) — run a trusted second implementation and compare. numpy-port-vs-torch is the canonical case; see [oracles.md](oracles.md).
-- **Hand-computed value** — a human works the arithmetic once and pins the literal. `confidence = 1 - λ₂/λ₁ = 1 - 0.5/2.0 = 0.75`. Immune to circularity because a human, not the code, produced it.
-- **Analytic closed form** — the quantity has a known formula independent of the implementation's algorithm (an FFT result checked against the analytic DFT of a pure tone).
-- **Planted ground truth** — construct the input so the answer is known by construction (a source at a chosen angle, mics at chosen positions). Sound *only* if the input is generated independently of the code under test; see the scene-generator problem in [oracles.md](oracles.md).
+A Property test asserts an invariant over examples or generated inputs: symmetry, monotonicity, idempotence, conservation, permutation invariance, boundedness, or round-trip relations. It need not know the exact answer.
 
-Metamorphic oracles are a fifth route when no direct oracle exists: assert a *relation* across inputs (double the input amplitude → output power quadruples) rather than an absolute value.
+Properties and Oracles complement one another. An implementation can satisfy useful invariants while returning wrong absolute values, and an example oracle can miss a broad input class.
 
-### Property — establishes soundness
+### Regression — stability
 
-A property test asserts an invariant that must hold for *every* input, usually with generated inputs (Hypothesis, fast-check, QuickCheck). It does not know the right answer; it knows a rule the right answer must obey. PSD-ness, symmetry, monotonicity, permutation-invariance, norm preservation, energy conservation, idempotence, sortedness. Properties catch whole classes of bug an example-based oracle misses, but a suite of only properties can pass while the absolute values are all wrong — properties and oracles are complements, not substitutes.
+A Regression test pins prior behavior and detects change. It does not prove that behavior was correct.
 
-### Regression — establishes stability, NOT correctness
+Distinguish:
 
-A regression test pins current output as a committed snapshot and fails on any change. This is valuable — it catches unintended drift — but it establishes only that behavior *has not changed*, never that behavior is *right*. The cardinal sin is naming a regression test as an oracle: a golden generated by the code under test is a change-detector, and calling it a "reference" or "ONNX oracle" launders stability into a false claim of correctness. Regression tests must say what they are, in the name and the docstring.
+- **verified-baseline regression:** the pinned behavior was independently validated at capture time;
+- **accept-current snapshot:** the output was captured without independent validation.
 
-Two sub-cases with different epistemic weight, worth distinguishing: a **verified-baseline** regression (the snapshot was confirmed correct once — e.g. captured from a known-good release — and now guards drift) versus an **accept-current / snapshot** test (`toMatchSnapshot`-style: nobody ever verified the output was right; it is purely what the code happened to emit). Both are stability-not-correctness, but the accept-current case is one relabel away from a circular golden and carries the heavier provenance warning — never let it drift toward an oracle claim.
+Record provenance so a future maintainer does not promote a snapshot into an Oracle by implication.
 
-### Contract — establishes interface shape
+### Contract — interface conformance
 
-A contract test asserts the declared API: types returned, exceptions raised on bad input, serialization round-trips, dispatch/routing decisions, CLI exit codes. It is the right and sufficient kind for glue, IO, and protocol code, where "correct" means "conforms to the interface," not "computes the right number." Using a mock to assert routing (which handler got called with which payload) is a *legitimate* contract test — distinct from mock-shadow, where the mock's return value is the thing asserted.
+A Contract test checks an API, schema, protocol, exception, serialization form, routing decision, CLI status, or boundary interaction. Contract evidence can legitimately use a test double when the observable claim is which collaborator was invoked with which payload.
 
-### Smoke — establishes liveness
+Asserting that a mock returned its configured value is not Contract evidence. Asserting that the system routed to the mock correctly is.
 
-A smoke test proves the code runs on representative input without raising. `assert result is not None`, `assert len(out) > 0`. This is a real and useful kind — install checks, import checks, does-the-pipeline-complete checks. It becomes a pathology *only* when it wears a stronger name. A smoke test called `test_smoke_*` is honest infrastructure; the same body called `test_localization_accuracy` is category collapse.
+### Smoke — liveness
 
-## 3. The required-kinds matrix
+A Smoke test proves that representative execution completes, imports, starts, or returns something. Liveness is useful for installations, entry points, and broad paths. It becomes misleading only when its name or surrounding claim implies correctness, accuracy, compatibility, or completeness.
 
-Assign each source module a floor. The floor is the *minimum kinds that must exist*, not a cap.
+## 2. Orthogonal failure surfaces
 
-| Module character | Required floor | Rationale |
-|---|---|---|
-| Numeric / algorithmic core — model port, DSP estimator, solver, transform | **Oracle + Property** + negative control, *or* a logged `@oracle-gap` waiver | "Correct" means "right number"; only an oracle establishes that, and a property guards the input space |
-| Stateful logic — filter, tracker, scheduler, state machine | **Property + Contract**; Oracle where truth is knowable | Invariants (monotonic uncertainty, bounded innovation) plus interface; oracle when a converged value is analytically known |
-| IO / serialization / protocol / storage | **Contract + Smoke** | "Correct" means "conforms to interface and round-trips"; no numeric truth to oracle |
-| CLI / cross-module integration | **Contract + Smoke** | Exit codes, wiring, does-the-flow-complete |
-| Pure glue / dispatch / routing | **Contract** | Only the routing decision matters |
+The five kinds describe functional truth. Record additional dimensions when the risk lives elsewhere:
 
-Enforce with `scripts/kind-coverage.py`: given a marker convention and the source tree, it reports modules missing a required kind. Start advisory (warn), then gate.
+- **Fuzz/robustness:** malformed, hostile, or unexpectedly structured inputs.
+- **Performance:** latency, throughput, resource, or complexity budgets.
+- **Concurrency:** interleavings, races, atomicity, cancellation, and ownership.
+- **Security:** adversarial capability and boundary enforcement.
+- **Compatibility:** behavior against an actual client, dependency, platform, or version.
+- **Lifecycle:** installation, startup, recovery, upgrade, idle, shutdown, and removal.
 
-**Make the floor conditional, or it backfires.** A hard Oracle mandate on a module whose oracle problem is genuinely unsolved (no reference, no analytic form, no independent generator — the very difficulty [oracles.md](oracles.md) is about) pressures the circular golden this taxonomy condemns: to satisfy the gate, someone marks a self-generated snapshot `@oracle`. So an unobtainable oracle is a **documented `@oracle-gap` waiver** — a tracked hole, not a fake oracle — and the gate must check oracles are *live* (the negative-control requirement), not merely present. A gate that counts markers without checking they can fail is a golden factory.
+A test can be Contract + compatibility, Property + concurrency, or Oracle + performance. Record both dimensions; an orthogonal label does not replace the functional kind.
 
-## 3a. What this taxonomy deliberately excludes
+## 3. Module-character heuristics
 
-The five kinds cover *functional value* claims. They do **not** subsume three kinds a thorough test engineer names — do not pretend they do:
+Use module character to prompt missing proof obligations, not to impose marker quotas.
 
-- **Fuzz / robustness** — property testing generates *valid* inputs to check invariants; fuzzing feeds *malformed/adversarial* input to check the code doesn't crash or corrupt. Different oracle (safety-under-garbage). If a module parses untrusted input, add fuzz coverage explicitly.
-- **Performance / benchmark** — a latency/throughput/complexity-regression test has a real oracle (a budget) and a real failure mode none of the five capture. Track it as its own kind where it matters.
-- **Concurrency / race** — needs interleaving exploration (stress, TSan, deterministic schedulers); orthogonal to all five.
+| Module character | Questions that must be answered |
+|---|---|
+| Numeric or algorithmic core | What establishes exact or bounded correctness? Which invariants span the input domain? What false mechanism makes the oracle degrade? |
+| Stateful logic | Which state invariants, transitions, invalid transitions, retries, and recovery paths matter? Is any converged value independently knowable? |
+| IO, storage, protocol, serialization | Which declared contracts and round trips matter? What corruption, partial failure, version mismatch, or trust boundary can propagate? |
+| CLI and integration | Which exit, wiring, process, environment, and handoff failures require a broader seam? |
+| Pure glue, dispatch, routing | Which collaborator, payload, ordering, and rejection decision is the public behavior? |
 
-Security/adversarial testing is partly Contract (input validation) and partly its own concern. The point: when a module's risk lives in one of these axes, the five-kind floor is *necessary but not sufficient* — name the extra kind rather than assuming Oracle+Property covers it.
+An Oracle + Property expectation remains a strong heuristic for numeric cores, and Contract + Smoke often fits IO. Treat those as diagnostic prompts. A mechanical “module has marker X” gate can be satisfied by irrelevant or inert tests and should not issue assurance without an explicit, validated module-to-claim mapping.
 
-## 4. The refactor sequence
+When no independent Oracle is currently obtainable, record an oracle gap with the missing authority and best available evidence. A visible gap is stronger than a circular golden labeled Oracle.
 
-You cannot rewrite a large suite atomically. Phase it so each phase is independently valuable and low-risk.
+## 4. Classification discipline
 
-- **Phase 0 — Taxonomy in place.** Define the five kind-markers (`@pytest.mark.oracle`, `.property`, `.regression`, `.contract`, `.smoke` or the framework equivalent) and the required-kinds table. Gate only *new* tests at first. No existing test changes; the bleeding stops.
-- **Phase 1 — Triage sweep.** Classify every existing test by kind. Delete the confirmed-dead, the tautologies, the conditional-guard can't-fail tests. Relabel goldens honestly. This is the audit output, executed. Expect meaningful net deletion.
-- **Phase 2 — Fill oracle gaps.** Stand up the independent oracles (see [oracles.md](oracles.md) for the two hard cases). Every numeric module gets a real oracle and a negative control. This is where correctness actually arrives, and it blocks on decisions — surface them as forks.
-- **Phase 3 — Consolidate.** Restructure so the test tree mirrors the source tree. Hoist duplicated fixtures to a shared conftest. Dissolve episode-named files into subsystem suites. Mechanical, low-risk.
-- **Phase 4 — Enforce.** Flip the kind-gate to all tests. Add mutation testing on the numeric core. Now the taxonomy is self-defending.
+- Classify the strongest claim each assertion actually supports, not the test name or decorator.
+- Let one test carry multiple kinds only when distinct assertions truly establish them.
+- Use markers when they improve selection or discoverability in that project; do not make marker presence the evidence.
+- Pair every consequential correctness or convergence claim with a falsifier that demonstrates sensitivity.
+- Keep expected-value provenance adjacent to the test or fixture when it could otherwise be mistaken for independent truth.
 
-Phases 1 and 3 are cleanup you can begin immediately from an audit. Phase 2 is the real project.
+The recurring category-collapse smells are worked in [../antipatterns.md](../antipatterns.md): circular goldens, guarded no-op tests, tautologies, decorative tolerances, mock shadows, static greps posing as behavior, and Oracle names on Smoke assertions.
 
-## 5. Structure: mirror source, not episodes
+## 5. Test-tree structure
 
-Test files should be named and located to mirror the source module they test — `tests/unit/frontend/test_music.py` for `src/pkg/frontend/music.py`. The anti-structure is **episode naming**: files named after the development event that spawned them (`test_wave1a_replacements`, `test_algorithmic_upgrades`, `test_r1_restructuring`, `test_redteam_manifest_b1_b12`). Episode files are how migration scaffolding and one-off redteam passes become permanent sediment: their real tests never get folded back into the subsystem suite, and their scaffolding never gets deleted. When you find one, migrate its live tests into the mirrored tree under the right marker and delete the shell — including the workstream IDs in its docstrings.
+Organize for ownership and discoverability. Source mirroring is useful when a source module is the natural owner; contract-, lifecycle-, compatibility-, or property-oriented suites may have better cross-cutting homes.
 
-A layout that works:
+Preserve stable paths unless movement improves maintenance or removes sediment. Dissolve episode-named files such as `test_wave1_rewrite.py` or `test_release_redteam_b7.py` by moving their live evidence to the enduring subsystem or claim owner. Delete the emptied shell after verifying no unique evidence or fixture role remains.
 
-```
-tests/
-  scenes/       # the ONE independent ground-truth generator + captured fixtures
-  oracle/       # reference-model snapshots + a provenance manifest
-  unit/<subsystem>/   # mirrors src/<subsystem>/ — oracle + property, colocated
-  property/     # cross-cutting invariant suites
-  integration/  # genuine cross-module flows only
-  regression/   # honestly-named change-detectors
-  contract/     # API shape, exceptions, serialization
-  smoke/        # install, liveness, format coverage
-  conftest.py   # ONE stub-provider, ONE fake-model, ONE factory — kills fixture duplication
-```
+A claim-to-evidence map can provide navigation without forcing every test into one universal directory scheme.

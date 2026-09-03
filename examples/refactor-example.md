@@ -1,55 +1,39 @@
-# Worked example — a first-principles refactor chart
+# Worked example — proof-obligation-driven apparatus refactor
 
-The design output for the same `relata` suite: not a patch-list of the audit findings, but a ground-up rebuild. Shows how the taxonomy drives the whole refactor.
+This example continues the embedding-server audit in [audit-example.md](audit-example.md). The refactor’s target was not a smaller suite; it was a denser and more reachable system of proof.
 
-## The root reframe
+## Governing invariant
 
-The wrong question was "how much coverage" (1.08:1 — looks great, means nothing). The right one: **for each thing under test, does a test exist that could actually fail if it were wrong?** Every audit finding was one disease — *category collapse* — a test claiming a stronger kind than its assertion delivered. So the refactor is a taxonomy refactor, not a rewrite.
+Every retained cost must buy a named failure signal. Every removed test must be dominated on claim, authority, seam, cadence, and falsification role—not merely duplicate line coverage.
 
-## The spine: assign required kinds per module
+## Choice ledger
 
-| relata module | Character | Required floor |
-|---|---|---|
-| `inference/`, `frontend/`, `enhancement/`, `calibration/` | numeric core | Oracle + Property + negative control |
-| `streaming/`, EKF trackers | stateful | Property + Contract; Oracle where truth is knowable |
-| `protocol/`, `storage/`, audio IO | IO | Contract + Smoke |
-| CLI, session integration | glue/integration | Contract + Smoke |
+| Choice | Evidence and reasoning | Rejected alternative | Validation |
+|---|---|---|---|
+| Keep HTTP matrices on the real application with a deterministic model. | Validation, CORS, schemas, counters, and error envelopes are decided outside model numerics. | Replay the same matrix through a downloaded model for realism. | The changed HTTP/client cluster passed at routine cadence; the real-model layer retained one native/v2 seam case. |
+| Cross real TCP for client and third-party compatibility. | In-process clients bypass serialization and socket failures. | Use the framework test client for everything. | Python client tests ran against an already-bound uvicorn socket; the bound socket removed free-port races. |
+| Load the locked model once and batch compatible numeric claims. | Shape, finiteness, normalization, and semantic relations require real inference but not separate model loads. | One isolated forward per assertion. | The model module fell from 253.37 seconds to 24.06 seconds while retaining the same authorities. |
+| Use the real tokenizer but substitute neural forward for the exact context boundary. | Token admission is decided after tokenization and before inference. | Infer at maximum context on both sides of the boundary. | A temporary `>`→`>=` mutation made the exact 8,192-token case fail. |
+| Replace fixed sleeps with events and fake clocks. | The old tests paid planted delays in teardown and introduced scheduling races. | Shorten the sleeps. | Timeout paths still executed while individual calls fell to roughly 0.11 seconds. |
+| Extract a controlled pure wheel and launch a fresh interpreter. | The claim was wheel-content discovery without checkout leakage, not pip behavior. | Create a venv and run pip for every case. | Fresh-process conformance remained intact and the test call fell to 0.36 seconds. |
+| Make every nonroutine selector explicit. | Default `not slow` configuration persisted even when lifecycle files were named. | Trust file naming and job titles. | Removing `-m slow` temporarily was rejected by a workflow regression. |
 
-A numeric module whose only coverage is Smoke has *no correctness coverage* — that framing turned the audit's scattered findings into a single actionable gate.
+## Consolidation
 
-## Solving the two oracle problems (the real work)
+Shared application and real-socket fixtures replaced divergent module-local copies. The 31-case slow server matrix became two irreducible real-model HTTP tests. Compatible assertions shared setup or batches; failures remained individually diagnostic. The 100-request concurrency regression stayed because no cheaper evidence observed its lost-counter failure.
 
-**Problem 1 — the numpy ports.** The library's whole thesis is "numpy replicates torch with no torch at runtime." The only oracle for that is torch. The current goldens faked it (captured numpy's own output → circular). Resolution offered as a fork: (a) torch as a *test-only* dep, regenerate expecteds from the real model every CI run (differential testing done right); (b) capture-once from the reference, provenance-locked; (c) vendored reference pairs. Lean: **(b) every run + (a) gated behind `RUN_ORACLE=1`** — honest goldens always, a true reference oracle on demand, no heavy dep in the default path (mirroring the suite's existing `RELATA_REAL_ASR` pattern).
+No wholesale test-tree move was performed. Stable ownership was already legible, and a claim-to-evidence map supplied navigation without source-mirroring churn.
 
-**Problem 2 — the DSP scenes.** Estimators tested on synthetic scenes where the answer is planted. Sound only if the scene is generated *independently* of the estimator — the near-field test failed because it wasn't. Fix is structural: **one independent scene generator** in `tests/scenes/` (analytic delay-and-superpose / image-source room model), imported by no estimator; ground truth flows one way.
+## Reachability repair
 
-## Enforcing sensitivity
+The apparatus documented exact routine, acceptance, real-model, numeric-parity, lifecycle, and publication commands. Scheduled CI installed the necessary dependency groups and explicitly selected slow evidence. Local absence of platform or optional dependencies remained a proof limit rather than being counted as success.
 
-The `test_joint_ekf_tolerance` test already had the antidote — a negative control proving DOA error *explodes* without re-estimation. Generalize to a law: **an assertion never seen fail is not known to be able to fail.** Every accuracy claim gets a paired negative control; mutation testing (mutmut) backstops the numeric core only.
+## Closure evidence
 
-## Target structure — mirror source, not episodes
+- Routine plane: 537 passed, 2 optional modules skipped, 18 slow tests deselected, no warnings, 20.13 seconds.
+- Irreducible real-model plane: 7 passed in 17.61 seconds with one shared model load.
+- Claim mutations: the inclusive token-boundary error and removed lifecycle selector were both rejected.
+- Mechanical smell scan: no remaining candidates, explicitly treated as supporting evidence rather than an all-clear.
+- Production source: unchanged.
 
-```
-tests/
-  scenes/       ← the one independent generator
-  oracle/       ← reference goldens + provenance manifest
-  unit/<subsystem>/  ← mirrors src/relata/<subsystem>/
-  property/  integration/  contract/  regression/  smoke/
-  conftest.py   ← one stub-provider, one fake-model, one factory
-```
-
-The episode files (`wave_*`, `*_upgrades`, `r1_restructuring`, `novel_approaches` citing "Plane 5 §5.3") dissolve: real tests migrate into the mirrored tree under the right marker, scaffolding is deleted, workstream IDs leave the docstrings.
-
-## Phased migration (can't rewrite 38k LOC atomically)
-
-- **Phase 0** — five kind-markers + required-kinds table; gate only *new* tests. Touches nothing.
-- **Phase 1** — triage sweep (= the audit, executed): delete dead/tautological/can't-fail, relabel goldens.
-- **Phase 2** — fill oracle gaps (stand up the two generators; every numeric module gets an oracle + negative control). The real project; blocks on the oracle forks.
-- **Phase 3** — consolidate: mirror the tree, hoist fixtures, dissolve episode files.
-- **Phase 4** — flip the gate to all tests; mutation-test the numeric core.
-
-Phases 1 and 3 start immediately from the audit. Phase 2 blocks on decisions — surfaced as forks, not picked silently.
-
-## The forks left to the user (not decided silently)
-
-Oracle strategy (1a/1b/1c), delete-vs-quarantine, CI gate hard-or-advisory, mutation-testing adopt-or-manual, scope (full vs numeric-core-only), and whether the chart becomes a persisted ADR. Each reflects the user's values, not a technical necessity — so each was presented, not chosen.
+The refactor added routine real-TCP coverage while becoming faster. That is evidence density: fewer broad repetitions, more exact boundaries, and no hidden claim that every environment ran locally.

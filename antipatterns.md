@@ -1,6 +1,6 @@
 # Anti-patterns
 
-The category collapses, each a wrong→right pair with the single feature that flips it. A test's kind is a claim; these are the ways the claim outruns the assertion. Lead with the right version; the wrong version exists to mark the trap.
+Category collapses and apparatus failures, each as a wrong→right pair with the single feature that flips it. A proof obligation can fail because its assertion is dishonest, its seam misses the defect, its selector never admits the test, or its cost buys no unique evidence.
 
 ### Circular golden
 ❌ Wrong:
@@ -141,6 +141,80 @@ Prevents: a coverage map that reads "separation: tested" when only liveness was 
 
 ### Episode-named file
 ❌ Wrong: `tests/test_wave1c_doa.py`, `tests/test_algorithmic_upgrades.py`, `tests/test_redteam_manifest_b1_b12.py` — files named after the development event, docstrings citing workstream IDs, coverage never folded into the subsystem suite.
-✅ Right: `tests/unit/frontend/test_music.py`, `tests/unit/enhancement/test_separation.py` — files named after the source module they mirror; the episode's real tests migrated in under the right marker, its scaffolding deleted.
-Why it flips: a filename keyed to *when* a test was written strands its coverage where no one maintaining the subsystem will look; a filename keyed to *what source it tests* keeps the suite navigable and dedup-able.
+✅ Right: move the live evidence to the enduring owner — a source-aligned subsystem suite, a compatibility suite, or a lifecycle suite — and list that owner in the claim-to-evidence map; delete the emptied episode shell.
+Why it flips: a filename keyed to *when* a test was written strands its evidence where maintainers will not find or deduplicate it; a durable behavioral owner keeps it legible without forcing every cross-cutting test to mirror source.
 Prevents: migration scaffolding and one-off redteam passes petrifying into permanent, duplicated sediment.
+
+### Realism gradient
+
+❌ Wrong: replay the full HTTP validation matrix through a downloaded neural model because the resulting tests are “more integration-like.”
+
+✅ Right: run validation through the real application with a deterministic model; retain one real-model HTTP test only for the model/server seam that can fail independently.
+
+Why it flips: the broader component does not participate in validation decisions, so it adds runtime and flakiness without making that claim more authoritative.
+
+Prevents: expensive end-to-end duplication being mistaken for stronger proof.
+
+### Selector illusion
+
+❌ Wrong: `pytest tests/test_lifecycle.py` after model acquisition, assuming naming the file overrides the project’s default `-m 'not slow'` selector.
+
+✅ Right: run and selection-check `pytest -m slow tests/test_lifecycle.py`, recording selected and deselected counts under the exact CI configuration.
+
+Why it flips: runner defaults remain active when a file is named; only the explicit selector admits the evidence.
+
+Prevents: CI spending resources on setup and then reporting green after silently deselecting the tests that justified it.
+
+### Marker-count assurance
+
+❌ Wrong: declare a numeric module covered because a basename heuristic found one `@oracle` and one `@property` marker nearby.
+
+✅ Right: map the module’s actual claims to independently inspected tests, verify authority and seam relevance, and use markers only for navigation or selection.
+
+Why it flips: marker presence is metadata; it does not establish that the marked assertion is live, relevant, independent, or even mapped to the right module.
+
+Prevents: a mechanically complete dashboard manufacturing false assurance.
+
+### Planted-sleep synchronization
+
+❌ Wrong:
+```python
+def test_timeout():
+    worker = submit(lambda: time.sleep(2))
+    assert await_result(worker, timeout=0.1) == TIMEOUT
+```
+
+✅ Right:
+```python
+def test_timeout():
+    release = Event()
+    worker = submit(lambda: release.wait())
+    try:
+        assert await_result(worker, timeout=0.1) == TIMEOUT
+    finally:
+        release.set()
+```
+
+Why it flips: an event keeps the worker blocked through the timeout and then releases teardown immediately; the planted sleep makes the assertion fast while the fixture still pays the delay.
+
+Prevents: slow, timing-sensitive tests whose cost hides after the assertion.
+
+### Isolation theatre
+
+❌ Wrong: create a virtual environment and invoke a package manager for every test whose actual claim is only that a handcrafted pure wheel exposes an entry point without importing the authoring checkout.
+
+✅ Right: extract the exact controlled wheel into an empty target and launch a fresh interpreter with that target first; use a real package manager in the separate test that claims package-manager compatibility.
+
+Why it flips: fresh interpreter and isolated wheel contents preserve the named failure surface; repeated environment creation exercises unrelated machinery.
+
+Prevents: ceremonial setup cost being credited as evidence.
+
+### Reduction by count or coverage
+
+❌ Wrong: delete one of two tests because they execute the same lines or satisfy the same coverage obligation.
+
+✅ Right: delete only after another reachable test has equal authority, preserves every failure surface and cadence role, and kills representative defects the candidate was meant to catch.
+
+Why it flips: equal structural coverage does not imply equal fault detection; distinct inputs, boundaries, platforms, or negative-control roles can expose different defects through the same lines.
+
+Prevents: streamlining that silently weakens the suite.

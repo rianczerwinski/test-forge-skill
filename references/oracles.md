@@ -33,12 +33,14 @@ When even an independent generator is impractical, fall back to metamorphic rela
 
 ## The negative control — proving the oracle is live
 
-An oracle test with a passing assertion still tells you nothing until you have seen it fail. Pair every accuracy/convergence oracle with a **negative control**: a sibling test that breaks the mechanism (disable the re-estimation, feed the wrong geometry, zero the weights) and asserts the metric *degrades past the threshold*. If the mechanism can be disabled and the oracle still passes, the oracle was inert. This is the hand-written form of mutation testing; the automated form (mutmut, cosmic-ray, Stryker on the numeric core) generalizes it. Run the automated form on the math, not the glue — mutants of IO and dispatch code mostly produce uninteresting survivors.
+An oracle test with a passing assertion still tells you nothing about sensitivity until you have seen it fail. Pair every consequential accuracy or convergence oracle with a **negative control**: break the mechanism (disable re-estimation, feed the wrong geometry, zero the weights) and assert that the metric degrades past the threshold. If the mechanism can be disabled and the oracle still passes, the oracle is inert.
+
+Use automated mutation tools where their operators provide useful signal, often computational and branching code. Use hand-chosen claim mutations where the decisive defect lives in a protocol boundary, configuration, artifact, selector, or workflow that a generic source mutator cannot express. Mutation establishes sensitivity; it does not make a circular expected value independent.
 
 ## A checklist for any numeric correctness test
 
 - Where does `expected` come from? If from the code under test → it is regression, relabel it.
 - Is the input generated independently of the code under test? If not → self-consistency, not correctness.
-- Have I seen this assertion fail? If never → add a negative control or a mutant.
+- Have I seen this assertion reject a relevant false mechanism? If never → add a negative control or claim-specific mutant.
 - Is the tolerance justified against the quantity's scale? If it is 10× the quantity → it cannot fail; tighten to the noise floor.
 - Does the name claim more than the assertion delivers? If it says *accurate* and asserts `not None` → rename or strengthen.

@@ -1,98 +1,153 @@
 ---
 name: test-forge
 description: >-
-  Establish what kind of truth each test provides — oracle, property, regression, contract, or smoke — and enforce that every module carries the kinds it needs. Use whenever writing, adding, running, auditing, redteaming, refactoring, or reviewing tests; when asked whether a test suite is trustworthy or how much redundancy / mismeasurement / pointless effort it holds; when designing or restructuring a test suite from first principles; or the moment you are about to invoke a test runner (pytest, jest, go test, cargo test, vitest) or write a new test. Detects category-collapse test smells (circular goldens, can't-fail conditional-guard tests, in-test tautologies, unfalsifiable assertions, mock-shadow tests) and works the test-oracle problem (differential and metamorphic testing, reference oracles, mutation-checked negative controls).
+  Prove software claims with the narrowest test seam that preserves each failure surface, classify what truth the evidence establishes, and verify that the intended tests actually execute. Use whenever writing, adding, running, reviewing, auditing, redteaming, streamlining, or refactoring tests; designing a test strategy or apparatus from first principles; investigating slow, redundant, flaky, skipped, deselected, mock-heavy, or untrustworthy suites; asking what could break and how to test it; or invoking pytest, jest, vitest, go test, cargo test, or another test runner. Routes between a lightweight FORGE path for ordinary test work, AUDIT for diagnosis, and REFORGE for apparatus redesign.
 ---
 
-# test-forge
+# Test Forge
 
-A test is not defined by what it covers. It is defined by **what kind of truth it can establish.** Coverage percentage measures nothing: in one audited DSP suite, a 38k-line test body at ~1:1 test-to-source was ~18% inert. The one question that matters: *for each thing under test, does a test exist that could actually fail if that thing were wrong?*
+Treat a test suite as a system of proof, not a collection of test functions. Begin from the claim and the failure it must expose; then choose the truth kind, authority, architectural seam, environment, cadence, and falsifier that make the evidence trustworthy.
 
-Every recurring test pathology is a **category collapse** — a test claiming a stronger kind of truth than its assertion can deliver. A smoke test wearing a correctness name. An equivalence check wearing an oracle name. A tautology wearing a property name. This skill names the kinds so the collapse becomes visible, then holds each module to the kind it needs.
+The governing question is:
 
-## When you reach for this
+> For every in-scope claim, what concrete defect must be observable, and what is the narrowest trustworthy test that would reject it?
 
-Two modes, one spine:
+Coverage, test count, marker count, realism, and green commands are supporting signals. None establishes that the right behavior was tested or that the intended evidence ran.
 
-- **AUDIT** an existing suite — measure redundancy, mismeasurement, and pointless effort; produce a triaged findings catalog. → read [references/audit.md](references/audit.md).
-- **DESIGN / REFACTOR** a suite from first principles — assign required kinds per module, solve the oracle problems, restructure. → read [references/taxonomy.md](references/taxonomy.md) then [references/oracles.md](references/oracles.md).
+## The proof-obligation record
 
-But the spine applies even to a single test you are about to write in passing. Before writing or running any test, name its kind and confirm its assertion could fail. That habit is the spine; the required-kinds rule, the oracle problems, and the audit lens are how it scales.
+Use this record when designing a consequential test or reasoning about a suite. Keep it mental for obvious local work; write it into a claim-to-evidence map for an audit or refactor.
 
-## The five kinds (the spine)
+```text
+Claim:
+Failure and propagation:
+Truth kind and authority:
+Narrowest seam preserving that failure:
+Environment and cadence:
+Measured cost:
+Falsifier or negative control:
+Execution selector and result:
+Remaining proof limit:
+```
 
-Ordered by strength of truth. Full treatment in [references/taxonomy.md](references/taxonomy.md).
+The fields constrain one another. A test is misplaced when its assertion is authoritative but its seam cannot observe the named failure, or when its seam is realistic but the assertion establishes only liveness.
 
-| Kind | Establishes | Its oracle is… | A legit pass looks like |
+## Truth kinds
+
+Truth kind describes what the assertion establishes; it does not describe test size, environment, or cost. Read [references/taxonomy.md](references/taxonomy.md) when classifying a suite or choosing between kinds.
+
+| Kind | Establishes | Authority |
+|---|---|---|
+| **Oracle** | Correctness | Independent reference, specification, hand calculation, analytic result, or independently planted truth |
+| **Property** | Soundness across a domain | Invariant or metamorphic relation |
+| **Regression** | Stability, not correctness | Prior or captured behavior with stated provenance |
+| **Contract** | Interface conformance | Declared API, protocol, schema, or boundary behavior |
+| **Smoke** | Liveness | Successful execution only |
+
+Fuzz/robustness, performance, concurrency, security, compatibility, and lifecycle are orthogonal failure surfaces. Name them when applicable; do not force them into the five functional truth kinds.
+
+## The seam law
+
+Choose the **narrowest authoritative seam that preserves the entire named failure**.
+
+- Test pure transformations directly when no boundary participates in the failure.
+- Cross an in-process application boundary for middleware, routing, validation, and serialization policy.
+- Cross a real socket when transport, client serialization, or connection behavior is the claim.
+- Cross a fresh process or installed artifact when import isolation, entry-point discovery, or packaging is the claim.
+- Cross the real operating-system or external-service lifecycle only when that boundary can fail independently.
+
+Move outward because a boundary adds a distinct failure surface, not because broader execution feels more realistic. Use a controlled fake for an expensive inner component when the outer boundary is the subject; use the real component when its numerics, side effects, or compatibility are the subject.
+
+## Evidence economics
+
+Maximize unique failure signal per unit of developer attention and execution cost. Cost never licenses weaker evidence, but it determines placement and cadence after the failure surface is preserved.
+
+- Measure setup, call, and teardown separately when possible; a fast assertion can hide expensive fixture or executor cleanup.
+- Share immutable expensive setup across compatible claims and batch inputs whose authority is unchanged by batching.
+- Synchronize concurrency and timeout tests on observable events or state; sleep only when elapsed time is itself the behavior under test, and release planted blockers before teardown.
+- Preserve a costly test when it alone observes a failure surface. Remove a cheaper-looking duplicate only after proving it adds no distinct authority, seam, cadence, negative-control role, or failure path.
+- Assign evidence to an edit loop, routine suite, scheduled job, release gate, or explicit manual run according to cost and environmental availability. A test moved out of the routine loop must remain visibly reachable elsewhere.
+
+## The falsifiability law
+
+> An assertion never observed rejecting a relevant false implementation is not yet known to be live.
+
+Use two complementary forms:
+
+- **Claim-specific falsifier:** deliberately break the behavior, boundary, selector, configuration, or workflow named by the claim and confirm the intended check rejects it. Boundary operators, omitted side effects, wrong routing, removed CI selectors, and corrupted manifests can be better mutants than arithmetic changes.
+- **Automated mutation testing:** use a harness where its operators and runtime provide high signal, typically on stable computational or branching logic and on diff-scoped release work. Triage equivalent and low-value mutants rather than optimizing a raw mutation score.
+
+An Oracle test also needs an independently derived expected value; killing a mutant proves sensitivity, not correctness. Read [references/oracles.md](references/oracles.md) for differential, metamorphic, planted-truth, and provenance-locked strategies.
+
+## Choose the operating mode
+
+### FORGE — ordinary test work
+
+Use this path for one test, a bounded code change, or simply running an existing suite.
+
+1. Name the observable claim and a representative defect.
+2. Choose the truth kind and independent authority the claim requires.
+3. Place the test at the narrowest seam that preserves the defect.
+4. Run the smallest command that actually selects the evidence; inspect runner configuration when hidden selectors, optional dependencies, or environment gates can change admission.
+5. Observe a relevant failure before calling a new consequential assertion trustworthy.
+6. State any material proof limit; do not manufacture a suite-wide ledger for routine local work.
+
+### AUDIT — determine whether an apparatus is trustworthy
+
+Read [references/audit.md](references/audit.md). Audit execution before interpreting green results: configuration, collection, selection, skips, deselection, dependencies, CI commands, warnings, timing, and actual cadence. Then map claims and failure surfaces to evidence, inspect assertion honesty, identify gaps, and establish which costs are dominated.
+
+Use `scripts/smell-scan.py` to seed Python candidates, never as an all-clear. It cannot judge oracle provenance, architectural seams, CI reachability, or semantic redundancy.
+
+### REFORGE — redesign or deeply streamline a suite
+
+Read [references/reforge.md](references/reforge.md), [references/taxonomy.md](references/taxonomy.md), and [references/oracles.md](references/oracles.md). Establish the baseline and proof obligations before editing. Consolidate fixtures, relocate evidence to the right seams, eliminate accidental waiting and repeated setup, repair selection, and remove only tests shown to be evidentially dominated.
+
+For a systematic whole-codebase or release-readiness audit, Audit Planes may derive the architectural risk topology first; Test Forge owns translating those risks into executable evidence and refactoring the test apparatus. Do not make an ordinary suite refactor inherit a whole-codebase audit package.
+
+## Reachability is part of truth
+
+A test that exists but is not admitted contributes no evidence.
+
+- Record collected, selected, skipped, deselected, expected-failure, and warning states separately.
+- Execute the exact CI or documented command when selection semantics matter. Naming a file may still inherit a default marker exclusion.
+- Verify optional dependency groups and environment gates are installed where their evidence is claimed.
+- Treat an unexpected skip, deselection, warning, empty collection, or stale generated artifact as a distinct state, not a pass.
+- Replace generic “full suite” language with exact evidence-plane commands and explicit proof limits.
+
+## Closure
+
+A test task closes when its scoped claim has authoritative, reachable evidence and a relevant falsifier. An apparatus audit or refactor closes only when:
+
+- every in-scope claim and material failure surface has evidence or an explicit proof gap;
+- each test runs at a seam capable of observing its named failure;
+- exact routine, scheduled, release, and manual selectors are documented and selection-checked;
+- representative false implementations, configurations, or workflows are rejected;
+- skips, deselections, warnings, unavailable environments, and external evidence are reported honestly;
+- retained expensive tests have a named unique function and removed tests were proven dominated;
+- the final result survives the relevant commands without weakening assertions, selectors, or thresholds.
+
+Passing tests are candidate evidence for closure, never closure by themselves.
+
+## Reasoning trace for apparatus changes
+
+For a material refactor, record consequential decisions rather than narrating every edit:
+
+| Choice | Evidence and reasoning | Rejected alternative | Validation |
 |---|---|---|---|
-| **Oracle** | Correctness | An *independent* truth: reference implementation, hand-computed value, analytic closed form, or planted ground-truth | numpy op equals the torch output; the estimator recovers the 45° source you planted |
-| **Property** | Soundness | A mathematical invariant that must hold for *all* inputs | covariance stays PSD; embeddings stay L2-normed; fused output stays sorted |
-| **Regression** | Stability (not correctness) | A committed snapshot of *current* behavior | output equals the golden — **and the test says "detects change, not correctness"** |
-| **Contract** | Interface shape | The declared API | raises `FileNotFoundError`; serializes round-trip; routes speaker→text |
-| **Smoke** | Liveness | Nothing — it only proves it ran | `assert result is not None` — **fine, when the test name says smoke** |
 
-These kinds are a **synthesis of established practice, not an ab-initio invention** — the skill leans on the literature rather than reinventing it. **Oracle** is the *test oracle problem*: in Barr et al.'s survey, oracles are *specified* (from a spec), *derived* (from another artifact — a reference implementation, a prior version, system properties), or *implicit* (heuristic). Note that a *differential* oracle (impl-vs-independent-reference) **and** a regression golden are *both* derived — what separates the strong oracle from the circular golden is the reference's **independence**, not the derived/specified label. A *metamorphic* oracle (a relation across inputs) needs no reference at all. **Property** is property-based testing. The **falsifiability** law below generalizes *mutation testing*. The audit smells map onto the van Deursen test-smell catalog (Missing Assert / Unknown Test, Assertion Roulette, Mock Overuse).
-
-The table partitions tests by **domain of claim** (liveness / interface / value-stability / value-invariant / value-correctness), so "ordered by strength of truth" is a rough guide, not a strict total order. Contract, in particular, is *oracle-backed on the interface domain* — its oracle is the declared API — which is why a **raised-exception-on-bad-input** is a Contract check while a **raised-exception-as-computed-result** is an Oracle check. Kinds compose on one module; they are not mutually exclusive slots.
-
-## The required-kinds rule
-
-A module cannot ship with only the weak kinds. Assign each source module its floor:
-
-| Module character | Required floor |
-|---|---|
-| Numeric / algorithmic core (model port, DSP estimator, solver, transform) | **Oracle + Property** (+ a negative control) — *or* a logged `@oracle-gap` waiver |
-| Stateful logic (filter, scheduler, state machine) | **Property + Contract**, Oracle where truth is knowable |
-| IO / serialization / protocol / storage | **Contract + Smoke** |
-| CLI / cross-module integration | **Contract + Smoke** |
-| Pure glue / dispatch / routing | **Contract** |
-
-A numeric module whose only coverage is Smoke has **no correctness coverage** — that is a hole, regardless of how many such tests exist. `scripts/kind-coverage.py` flags these mechanically once tests are marked by kind.
-
-**The floor is conditional, or it backfires.** A *hard* oracle mandate on a module whose oracle problem is genuinely unsolved (no reference, no analytic form, no independent generator) pressures exactly the pathology this skill condemns: to pass the gate, someone marks a self-generated snapshot `@oracle` and ships a circular golden. So an unobtainable oracle is a **documented `@oracle-gap` waiver** — a *tracked hole*, not a license to fake one — and the gate must verify oracles are **live** (via the negative-control requirement below), not merely present. A gate that counts `@oracle` markers without checking they can fail manufactures the collapse.
-
-## The negative-control law (kills the can't-fail class)
-
-> **An assertion you have never seen fail is not known to be able to fail.**
-
-This is the **falsifiability** premise; mutation testing is its automated, suite-wide form. Enforce it at two distinct scales — they are complements, not substitutes:
-
-- **Paired negative control** (manual, per-oracle) — for every accuracy or convergence claim, write a sibling test that *breaks the mechanism* and asserts the metric degrades. If disabling the thing under test still passes the test, that *one* oracle was measuring nothing. (A model of this: a DOA-tolerance test that proves error *explodes* when re-estimation is removed.)
-- **Mutation testing** (automated, suite-wide) on the numeric core only (mutmut, cosmic-ray, Stryker) — mutate the *source* (flip `+`↔`-`, `<`↔`<=`) and require *some* test to catch it. This measures whether the whole suite would catch an arbitrary bug, which a per-oracle negative control does not. Do not run it on IO/glue; the payoff is in the math.
-
-A negative control proves *this* oracle is live; mutation testing measures the *suite's* sensitivity. Writing the former does not grant the latter.
-
-## Audit mode, in brief
-
-Run the redteam lens (full detectors, greps, and severity model in [references/audit.md](references/audit.md); `scripts/smell-scan.py` produces file:line candidates for review). The seven category-collapse traps:
-
-1. **Circular golden** — the golden was generated by the code under test. It detects change, never correctness; fatal when its name claims "reference" or "oracle."
-2. **Conditional-guard can't-fail** — every assertion sits inside `if <precondition>:`; when the precondition is not met, zero assertions run and the test goes green on exactly the failure it names.
-3. **In-test tautology** — the expected value is recomputed by the same code under test, or `assert x == x`.
-4. **Weakened-until-unfalsifiable** — tolerance far wider than the quantity's scale, `assert regime in (A, B)` covering N-of-M, or a range check that cannot fail (`0 <= az < 360`).
-5. **Mock-shadow** — the assertion checks a mock's own configured return value; nothing real ran. (Asserting a call *happened* — `assert_called_once` — is legitimate routing/contract, *not* this smell; the smell is asserting the fabricated return.)
-6. **Static-grep-as-behavior** — a `re.search` over source text dressed as a behavioral test.
-7. **Oracle-name-on-smoke** — the name says *localizes / correct / accurate* while the body asserts only `not None` / `len > 0`.
-
-Every finding gets: file:line, kind-claimed vs kind-delivered, severity, and one recommendation (delete / merge / tighten / fix). Prioritize the tests that would stay green through the regression they name — those are more dangerous than redundant ones.
-
-## Design / refactor mode, in brief
-
-The refactor is fundamentally a *taxonomy* refactor, not a rewrite. Sequence (full version in [references/taxonomy.md](references/taxonomy.md)):
-
-0. **Taxonomy in place** — define the five kind-markers and the required-kinds table; gate only *new* tests at first. Stops the bleeding, touches nothing.
-1. **Triage sweep** — classify every existing test by kind; delete the dead / tautological / can't-fail; relabel goldens honestly. (This is the audit output, executed.)
-2. **Fill oracle gaps** — stand up the independent oracles ([references/oracles.md](references/oracles.md)); every numeric module gets a real oracle + negative control.
-3. **Consolidate** — structure mirrors *source*, not development episodes; hoist duplicated fixtures to a shared conftest; dissolve episode-named files (`wave_*`, `*_upgrades`, `redteam_manifest_*`) into subsystem suites under the right marker.
-4. **Enforce** — flip the kind-gate to all tests; add mutation testing on the numeric core.
-
-Phases 1 and 3 are cleanup you can start immediately. Phase 2 is the real project and blocks on the oracle decisions — surface those as decision forks, do not pick silently.
-
-## Worked examples
-
-- [examples/audit-example.md](examples/audit-example.md) — a real suite audited into a triaged catalog.
-- [examples/refactor-example.md](examples/refactor-example.md) — a suite charted into a first-principles rebuild.
+Also retain the baseline, final commands and results, adversarial mutations, and proof limits. Write this trace into the repository only when it has continuing operational or review value, or when the user asks for it; otherwise report it conversationally. A ledger that records routine renames and formatting is audit theatre.
 
 ## Anti-patterns
 
-[antipatterns.md](antipatterns.md) — the category collapses as wrong→right pairs, each with the discriminating feature that flips it.
+Read [antipatterns.md](antipatterns.md) when auditing or reforging. It pairs category collapses with apparatus-level failures such as realism gradients, selector illusions, marker quotas, planted sleeps, and reduction by count.
+
+## Additional resources
+
+- [references/audit.md](references/audit.md) — execution census, evidence census, dominance analysis, and audit output.
+- [references/reforge.md](references/reforge.md) — suite redesign, seam placement, cost shaping, reachability repair, and closure.
+- [references/taxonomy.md](references/taxonomy.md) — the five truth kinds, orthogonal surfaces, and conditional module heuristics.
+- [references/oracles.md](references/oracles.md) — independent oracle construction and falsification.
+- [references/lineage.md](references/lineage.md) — prior-art lineage and the method’s novelty boundary.
+- [examples/audit-example.md](examples/audit-example.md) — execution-first audit example.
+- [examples/refactor-example.md](examples/refactor-example.md) — proof-obligation-driven apparatus refactor.
+- `scripts/smell-scan.py` — Python AST heuristic that emits review candidates, not verdicts.

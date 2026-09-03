@@ -1,40 +1,56 @@
-# Worked example — auditing a suite
-
-A condensed, illustrative walkthrough of a real audit of a numpy-only DSP/ML library's test suite — findings are paraphrased to show the *method and output shape*, not reproduced with their original file:line citations (the real catalog carried those). Treat the specific claims here as representative, not as a checkable record.
+# Worked example — execution-first apparatus audit
 
 ## Input
 
-`relata` — 130 test files, ~38k test LOC against ~35k source LOC (1.08:1). The prompt: *how much redundancy, how much mismeasurement, how much pointless effort.*
+A local embedding server had 587 collected pytest cases, a routine suite, scheduled model acquisition, platform lifecycle jobs, and a large slow HTTP module. The prompt was to determine whether the suite was trustworthy and how much effort was pointless.
 
-## Method
+## Execution census
 
-The suite was too large to read serially, so: cluster the 130 files by subsystem (neural/ops, spatial/calibration, EKF/fusion/streaming, ASR/transcript, infra/CLI), hand each cluster to an agent with the seven-detector rubric from [../references/audit.md](../references/audit.md), and synthesize with file:line evidence. `smell-scan.py` seeded the mechanical candidates first.
+The first pass bound the revision, read `pyproject.toml` and CI before interpreting test results, and recorded:
 
-## Output — findings, by the three questions
+- 531 passed, 2 skipped, and 56 deselected under the default `not slow` selector;
+- 24.48 seconds warm and 38.66 seconds colder;
+- 31 slow HTTP cases, with no CI command naming their module;
+- a scheduled lifecycle command that acquired all model snapshots and then invoked a slow-marked file without `-m slow`.
 
-**Redundancy (~15–18%, structurally concentrated).** Not scattered — it clustered in recognizable shapes:
-- *Episode-file vs permanent-suite overlap*, with a twist: `SRPLocalizer = SRPLocalizerNP` (a source alias) meant three "permanent" files (`test_srp_phat`, `test_music`, `test_calibration`) were one-line `assert isinstance(result, list)` shells testing the *same class* that the migration-era `test_wave1c_doa.py` covered with real accuracy assertions. **The episode file was the keeper; the permanent files were the dead scaffolding** — the inverse of the usual guess. Verdict required reading the source, not the filename.
-- *Three-way smoke duplication* — ECAPA shape/norm/determinism asserted in three files.
-- *Verbatim fixture copies* — a fake model copied across three ASR files; six near-identical stub providers.
+Collection under the exact scheduled command showed that all four lifecycle tests were deselected. This was the highest-severity finding: the apparatus paid the setup cost and emitted green without executing the evidence its job name promised.
 
-**Mismeasurement (smaller, dangerous).** Ranked by deception:
-- *Circular goldens* — `test_golden_refs.py` asserted numpy output bit-exactly equals a golden generated *by that same numpy code*, with a docstring claiming "ONNX oracles." False. Regression mislabeled Oracle.
-- *In-test tautologies* — `residual = (d_b-d_a)/c - tdoa_obs` where `tdoa_obs` *is* `(d_b-d_a)/c`; a `test_pyannote` that reimplemented the segmenter's aggregation inside the test and asserted on its own copy.
-- *Conditional-guard can't-fail* — assertions wrapped in `if converged:` / `if phase >= EKF_TRACKING:`, going green on exactly the non-convergence they named.
-- *A gate test proving its opposite* — `test_capture_device_cannot_rename` asserted the rename **succeeds**.
-- *Weakened-until-unfalsifiable* — `assert regime in (STATIC, WALKING)` (2-of-4), `assert 0 <= az < 360`.
-- *Silently-skipped correctness* — the only validation of a hand-rolled DSP kernel skipped in every CI run because its reference dep wasn't installed.
+## Proof-obligation sample
 
-Myth busted by the audit: the mock-heavy ASR tests were checked specifically and found to assert *routing* (which speaker gets which text), a legitimate contract use — not mock-shadow. Don't flag on "uses a mock"; flag on "asserts the mock's own return value."
+| Claim | Failure that must be observable | Authority and seam | Existing problem |
+|---|---|---|---|
+| HTTP validation rejects over-limit input | inclusive boundary or prefix miscount admits/rejects the wrong request | real application; real tokenizer only where tokenization decides admission | full real model loaded for an HTTP decision made before inference |
+| Python client interoperates with the server | serialization or socket behavior differs from in-process calls | real TCP listener with deterministic server core | real-model cost attached to a transport claim |
+| Default model returns useful normalized embeddings | backend or task-prefix behavior changes numeric output | locked real model and semantic/numeric oracle | separate forwards repeated compatible setup and inputs |
+| Installed wheel discovers adapters outside the checkout | entry point absent or source tree leaks into import | installed wheel contents plus fresh interpreter | new venv and package-manager startup repeated per test |
+| launchd lifecycle works | install/wake/embed/idle/remove path fails on macOS | real OS lifecycle with acquired artifacts | intended tests never selected |
 
-**Pointless effort (~12–15%).** Dead helpers (zero call sites, confirmed by grep), meta-tests existing only to test their own fixtures, a 630-LOC profiling script parked in `tests/` wired to no gate, a real-model test that pulled 75 MB to transcribe *silence* and assert only list-shape.
+## Assertion audit
 
-## The three biggest wins (led with false-confidence, not waste)
+The smell scanner seeded five candidates. Manual inspection confirmed three vacuity/conditional issues and rejected two false positives. The slow server suite also contained stale imports and repeated validation, CORS, schema, readiness, and error claims already established at a narrower authoritative seam.
 
-1. **Fix the false coverage map** — relabel the circular goldens, delete the tautologies, unwrap the conditional guards. ~250 LOC, highest stakes: this is where a real regression currently passes green.
-2. **Collapse the episodes into the subsystems** — delete the smoke shells, dedupe fixtures to conftest, drop workstream IDs from docstrings. ~1,500–2,000 LOC, mechanical.
-3. **Resolve the silent skips and dead weight** — add the missing reference dep so the equivalence check runs; delete confirmed-dead code.
+The audit did not call every real-model test redundant. It retained model numerics, a real tokenizer boundary, and lifecycle evidence because those components or boundaries were the subject of the claims.
 
-## What made it an audit and not a vibe
+## Cost attribution
 
-Every finding had file:line, a kind-claimed-vs-delivered judgment, a severity driven by danger (a can't-fail test on a critical path outranked a large honest-but-redundant suite), and one recommendation. The strong parts were named too — the op-correctness suites with hand-computed expecteds, the EKF tolerance test *with a negative control* — so the user could calibrate, not just cut.
+Durations showed distinct causes rather than one generic “slow suite”:
+
+- repeated model loads and neural forwards;
+- fixed sleeps whose planted blockers survived into teardown;
+- repeated virtual-environment and pip startup;
+- duplicated fixture and local-server implementations;
+- broad protocol matrices rerun through an irrelevant real model.
+
+Each optimization recommendation named the evidence preserved. The 100-request concurrent counter regression remained because it alone exercised a lost-update failure surface.
+
+## Output
+
+The audit produced:
+
+1. the exact execution baseline and hidden-selector defect;
+2. a claim-to-evidence map with seam, cadence, cost, and proof limits;
+3. assertion-level false-confidence findings;
+4. dominance candidates for the duplicated slow HTTP matrix;
+5. a dependency-ordered REFORGE topology.
+
+The decisive move was auditing whether evidence ran before judging what green meant. A taxonomy-only audit would have found weak assertions but missed the costliest false assurance.

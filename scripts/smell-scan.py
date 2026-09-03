@@ -29,8 +29,9 @@ Detectors (map to references/audit.md §"The seven category-collapse detectors")
                                      or `.assert_called*` is the SOLE signal
   7  oracle-name-on-smoke          — strong-claim name, but every assertion is liveness
 
-Not mechanically detectable (still a human/agent read): circular goldens (needs to know
-how the golden was generated) and episode-file redundancy (needs cross-file semantics).
+Not mechanically detectable (still a human/agent read): circular goldens (needs oracle
+provenance), semantic redundancy, architectural seam fit, selector reachability, and
+whether an expensive test buys a unique failure signal.
 
 Usage:
     smell-scan.py <path> [<path> ...]        # files and/or dirs; dirs scanned recursively
@@ -259,8 +260,8 @@ def scan_file(path: Path):
                 add(u.lineno, "4-membership", fn.name, "membership is the sole assertion — N-of-M, weak")
             # NB: a sole `mock.assert_called_once()` is routing verification = a legitimate
             # (if thin) contract, NOT mock-shadow. The real shadow is asserting the mock's
-            # configured RETURN value, caught by 5-mock-shadow-return below. If such a
-            # contract test under-covers a numeric module, kind-coverage.py flags it, not this.
+            # configured RETURN value, caught by 5-mock-shadow-return below. Whether the
+            # contract is relevant and sufficient belongs to the proof-obligation audit.
 
         # 4 — loose tolerance (abs()<N or assert_allclose atol/rtol), outside weak kinds
         if not fn.declares_weak_kind():
@@ -317,7 +318,7 @@ def main() -> int:
 
     if not grouped:
         print(f"no mechanical smell candidates across {len(files)} file(s). "
-              "Circular goldens and episode-file redundancy still need a human/agent read.")
+              "Oracle provenance, seam fit, reachability, and semantic redundancy still need review.")
         return 0
 
     total = sum(len(v) for v in grouped.values())
@@ -327,7 +328,7 @@ def main() -> int:
         for entry in grouped[detector]:
             print(f"  {entry}")
         print()
-    print("Not detected mechanically (need a human/agent read): circular goldens, episode-file redundancy.")
+    print("Not detected mechanically: oracle provenance, seam fit, reachability, and semantic redundancy.")
     return 0
 
 

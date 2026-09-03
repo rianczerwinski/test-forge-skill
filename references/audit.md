@@ -1,51 +1,113 @@
-# Audit mode — the redteam lens
+# AUDIT — determine whether a test apparatus is trustworthy
 
-Auditing a suite answers three questions: how much **redundancy** (the same truth established twice), how much **mismeasurement** (a test that does not measure what it claims), and how much **pointless effort** (a test that cannot fail or exercises nothing real). Mismeasurement is the dangerous one — a redundant test wastes time; a mismeasuring test manufactures false confidence and stays green through the regression it names.
+Audit the apparatus in the order that evidence becomes usable: execution, obligations, individual assertions, duplication, and closure. A green result has no meaning until the audit establishes what was selected and which claim the selected evidence can support.
 
-## How to run an audit at scale
+## 1. Freeze the baseline
 
-A large suite (100+ files) is beyond a single serial read. Fan out: cluster the test files by subsystem, hand each cluster to an agent with *this* rubric, and synthesize the findings with file:line evidence. Each cluster report returns: total LOC, test-fn count, a redundancy/waste estimate, a findings table, and a "biggest wins" list. `scripts/smell-scan.py` runs first to seed each agent with mechanical candidates.
+Bind the source revision and preserve existing user changes. Read the test-runner configuration, dependency groups, project test documentation, and CI/release workflows before running commands.
 
-Every finding carries: **file:line**, **kind-claimed vs kind-delivered**, **severity** (H/M/L), one-line **evidence**, and one **recommendation** (delete / merge / tighten / fix). Severity is driven by *danger*, not size: a can't-fail test on a critical path outranks a large redundant-but-honest suite.
+Record:
 
-## The seven category-collapse detectors
+- collected, selected, passed, failed, skipped, expected-failure, deselected, and warning counts;
+- the exact routine command and every documented or CI evidence-plane command;
+- environmental and optional-dependency gates;
+- cold and warm runtime when model, compiler, container, or artifact initialization is material;
+- slowest setup, call, and teardown phases when the runner exposes them;
+- CPU, memory, disk, network, or external-service costs when they can constrain cadence.
 
-Each is a way a test claims a stronger kind than it delivers. Wrong→right pairs are in [../antipatterns.md](../antipatterns.md); this is the detection guide.
+Selection is an object of audit. Run collection under the exact marker expression and environment used by CI when feasible. Confirm that a command naming a file actually admits its intended tests; runner-level defaults can still deselect them.
 
-### 1. Circular golden
-The golden was produced by the code under test. **Detect:** read the golden-generation script — does it import the module under test? Does the golden's docstring claim a "reference"/"oracle" origin the generator does not actually use? **Verdict:** it is a Regression test mislabeled Oracle. Relabel and stop counting it as correctness.
+Do not install missing optional dependencies merely to make the census look complete unless the task authorizes environment changes. Record the unavailable evidence and where it is expected to run.
 
-### 2. Conditional-guard can't-fail
-Every assertion sits inside `if <precondition>:` — when the precondition is not met, the test runs zero assertions and passes. This gives false green on exactly the behavior it names (convergence, bootstrap, tracking). **Detect:** grep for asserts enclosed by an `if`; look for `if converged:`, `if segments:`, `if result is not None:` wrapping the only assertions. **Fix:** assert the precondition is reached first, then assert the magnitude.
+## 2. Derive the proof-obligation population
 
-### 3. In-test tautology
-`expected` is recomputed by the same code under test, or the test reimplements the production logic inside itself and asserts on its own copy, or `assert x == x`. **Detect:** the same formula appears on both sides of the assertion; `assertTrue` wrapping an equality; a helper in the test file that mirrors the module. **Fix:** call the real code; source `expected` from a human or a reference.
+Read externally meaningful claims from specifications, public APIs, user workflows, architecture, state transitions, incident history, fixed defects, compatibility promises, deployment behavior, and release documentation. Source modules help locate evidence; they are not the population denominator.
 
-### 4. Weakened-until-unfalsifiable
-The assertion was loosened until it cannot fail: a tolerance far wider than the quantity's scale (`abs(x) < 1000` on a quantity near 1), an `in (A, B)` membership covering N-of-M outcomes, a range check that is always true (`0 <= azimuth < 360`). **Detect:** compare tolerance to the expected magnitude; flag membership asserts and full-range bounds. **Fix:** tighten to the noise floor, or assert the specific expected value.
+For each obligation, record:
 
-### 5. Mock-shadow
-The assertion checks a mock's own configured return value, so nothing real executed. **Detect:** the asserted value traces back to a `MagicMock(return_value=…)` set up in the same test. **Distinguish from legitimate contract tests:** asserting *which* handler was called with *which* payload (routing — including a bare `assert_called_once`) is a valid contract check; asserting that the mock returned what you told it to return is the smell. Three-way split: assert-the-mock's-return = shadow; assert-it-was-called = contract; assert-a-real-transform-of-the-mock's-output = legitimate. **Fix:** exercise the real path, or assert on the logic the production code applies to the mock's output.
+```text
+Claim:
+Failure and propagation:
+Truth kind and independent authority:
+Required architectural seam:
+Current evidence and selector:
+Cadence and measured cost:
+Falsifier status:
+Proof limit:
+```
 
-### 6. Static-grep-as-behavior
-A `re.search` / substring scan over source text, dressed as a behavioral test — passes or fails on formatting, not behavior. **Detect:** the test reads a `.py`/source file and regexes it. **Fix:** move to a CI lint, or write a real behavioral assertion.
+Name propagation far enough to make seam choice possible. “Client request breaks” may decompose into client serialization, TCP transport, server validation, model inference, and response decoding; each can require different evidence.
 
-### 7. Oracle-name-on-smoke
-The name promises correctness (`test_localization_accuracy`, `test_separates_speakers`) while the body asserts only `not None` / `len > 0`. A common collapse, and easy to miss because the name reads as coverage. **Detect:** compare the strongest word in the test name to the strongest assertion in the body. **Fix:** rename to `_smoke`, or add the assertion the name promises.
+When the requested scope is a systematic whole-codebase or release-readiness assurance audit, consume the risk topology from Audit Planes rather than inventing a second exhaustive census. Test Forge still evaluates and restructures the resulting test evidence.
 
-## Redundancy patterns (the same truth, twice)
+## 3. Inspect assertion honesty
 
-- **Episode-file vs permanent-suite overlap** — a migration/redteam-episode file re-tests what a subsystem suite already covers (or vice-versa: sometimes the episode file is the *only* real test and the "permanent" file is a smoke shell). Resolve by checking the source: if two files test the same symbol, keep the one with the stronger kind and delete the other.
-- **Three-way smoke duplication** — the same shape/dtype/determinism template repeated across per-item files. Parametrize into one; keep the single oracle check that actually validates.
-- **Verbatim fixture copies** — the same stub/fake/factory pasted across files. Hoist to a shared conftest.
-- **Integration re-running unit convergence** — an integration test re-runs an expensive loop already proven at the unit level. Trim to a thin wiring assertion.
+Classify what each consequential test actually establishes using [taxonomy.md](taxonomy.md), then compare it with the claim attached to it. Run `scripts/smell-scan.py` on Python suites to seed candidates, and manually inspect all material candidates plus high-consequence tests it cannot understand.
 
-Not everything that looks redundant is: files that test *distinct code paths* (buffered vs streaming vs device-capture) or *distinct methods* (example-based vs property-based over the same function) are complements. Verify by code path before merging.
+Prioritize false confidence over waste:
 
-## Pointless effort (no failure, no real execution)
+1. a test that stays green through the defect it names;
+2. an external claim whose only evidence is skipped, deselected, stale, or unavailable;
+3. a test whose authority is circular or whose seam bypasses the failure;
+4. unique but flaky or operationally unreachable evidence;
+5. redundant or accidentally expensive evidence.
 
-Dead helpers (zero call sites), meta-tests that exist only to test their own fixtures, standalone profiling scripts parked in the test dir and wired to no gate, expensive real-model or long-simulation runs whose only assertion is a shape check, trivial getter/dataclass/enum round-trips. Confirm dead code with a grep for call sites before deleting; downgrade expensive-but-vacuous runs to a cheap smoke or give them the assertion that justifies their cost.
+Every finding should include location, claimed versus delivered truth, named failure surface, consequence, evidence, and one disposition: fix, strengthen, relocate, merge, delete, or record a proof gap.
 
-## Output shape
+## 4. Analyze seams and doubles
 
-A triaged, resumable catalog: a one-line suite summary (LOC, test-fn count, overall redundancy/waste estimate), a findings table sorted by severity, and a "biggest wins" list naming the specific deletions/merges/fixes that remove the most pointless effort and the most false confidence. Lead the wins with mismeasurement fixes (false confidence) over redundancy trims (wasted time).
+For each claim, ask whether the current test crosses too little or too much architecture.
+
+- **Too narrow:** the test bypasses the boundary where the named defect occurs, such as using an in-process client to claim socket compatibility.
+- **Too broad:** the test loads a real model, database, browser, or external service for a decision already made by validation or routing code.
+- **Well placed:** every real boundary is necessary to observe the failure, and every substituted component is outside the subject of the claim.
+
+Do not rank tests on a unit→integration→end-to-end realism gradient. A narrower Contract test can be authoritative for one claim while a fresh-process Smoke test is necessary for another.
+
+## 5. Establish evidential dominance
+
+Call a test removable as redundant only when another reachable evidence path:
+
+- supports the same claim with equal or stronger authority;
+- preserves every failure surface the candidate can observe;
+- runs at an equal or more useful cadence;
+- retains any negative-control, compatibility, platform, or diagnostic role;
+- and does not merely share line or branch coverage.
+
+Broader execution is not automatically stronger. Coverage-equivalent reduction is not proof-preserving; empirical test-suite-reduction research has found substantial losses in fault detection. When uncertainty remains, keep the test or validate the proposed deletion with representative mutants before removing it.
+
+## 6. Attribute cost
+
+Separate essential from accidental cost:
+
+- setup repeated across tests that could share an immutable fixture;
+- inference or compilation repeated for compatible inputs that could batch;
+- arbitrary sleeps used as synchronization;
+- teardown waiting for planted blockers or leaked executors;
+- racy free-port discovery instead of passing an already-bound socket;
+- process, environment, or package-manager setup irrelevant to the claim;
+- duplicated matrices repeated at broader seams.
+
+Cost findings state both time saved and evidence preserved. “Delete because slow” is not a valid recommendation.
+
+## 7. Audit reachability and truth states
+
+Inspect configuration, workflow YAML, scripts, dependency installation, environment variables, and generated-artifact steps as part of the apparatus.
+
+- Distinguish pass, expected failure, skip, deselection, empty collection, warning, setup failure, and unavailable environment.
+- Verify scheduled/manual commands contain the selectors required to override routine exclusions.
+- Verify generated fixtures or manifests are refreshed or revision-bound before their consumers run.
+- Promote actionable deprecations or compatibility warnings into dependency/configuration work; do not normalize them through blanket suppression.
+- Ensure documentation names exact commands and the claims each command discharges.
+
+## 8. Deliver the audit
+
+Return:
+
+1. **Baseline:** revision, commands, selection states, timings, environments, and proof limits.
+2. **Significance-first findings:** false confidence and missing evidence before waste.
+3. **Claim-to-evidence map:** obligations, authority, seams, selectors, cadence, falsifiers, and gaps.
+4. **Dominance candidates:** exact delete/merge/relocate opportunities with the evidence-preservation argument.
+5. **Reforge topology:** dependency-ordered changes, without implementing them unless the user authorized refactoring.
+
+Report a redundancy percentage only with an explicit denominator and equivalence method. Treat a clean smell scan as supporting evidence while the claim map, reachability, oracle provenance, and semantic review determine trustworthiness.
