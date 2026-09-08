@@ -148,6 +148,7 @@ Read [antipatterns.md](antipatterns.md) when auditing or reforging. It pairs cat
 - [references/taxonomy.md](references/taxonomy.md) — the five truth kinds, orthogonal surfaces, and conditional module heuristics.
 - [references/oracles.md](references/oracles.md) — independent oracle construction and falsification.
 - [references/lineage.md](references/lineage.md) — prior-art lineage and the method’s novelty boundary.
+- [references/final-review.md](references/final-review.md) — maintenance consultation, reproduced helper defects, and pending revision recommendations; not operative instructions.
 - [examples/audit-example.md](examples/audit-example.md) — execution-first audit example.
 - [examples/refactor-example.md](examples/refactor-example.md) — proof-obligation-driven apparatus refactor.
 - `scripts/smell-scan.py` — Python AST heuristic that emits review candidates, not verdicts.
