@@ -91,3 +91,7 @@ Representative query families:
 - `"test suite reduction" "mutation" "oracle" "SKILL.md"` and `"test effectiveness" "reachability" "infection" "propagation" refactoring`
 
 The final two combination/ancestral families added corroboration without a new close whole-skill alternative. Private methods, unindexed skills, and comparative live effectiveness remain outside the evidence. Reconsider the synthesis if a demonstrated alternative covers its obligations with less machinery.
+
+## Python helper implementation
+
+The bounded repair review on `20260908` reused the domain and skill-ecosystem reconciliation above and checked Python's primary [source-decoding API](https://docs.python.org/3/library/tokenize.html#tokenize.open) and [AST traversal API](https://docs.python.org/3/library/ast.html#ast.NodeVisitor). `tokenize.open` supplies encoding-cookie and UTF-8 BOM handling; the scanner limits its iterative walk to statement containers rather than recursively visiting irrelevant expressions. These are standard-library enablers, not new parsing mechanisms. The posture remains a local repair of Test Forge; no renewed whole-skill novelty claim or broad ecosystem survey was needed.
