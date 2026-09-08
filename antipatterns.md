@@ -130,7 +130,7 @@ Why it flips: durable behavioral ownership makes future evidence discoverable wi
 
 ❌ Wrong: delete tests because they cover the same lines or because representative mutants were all killed.
 
-✅ Right: document surviving authority, fault families, inputs/histories, environment, cadence, and diagnostic roles. Use mutants as supporting probes, preserving any unresolved unique evidence.
+✅ Right: document surviving authority, fault families, inputs/histories, environment, cadence, and diagnostic roles. Preserve uncertain unique evidence until its replacement is demonstrated; a written follow-up alone does not authorize removal. Any owner-authorized evidence gap remains explicit.
 
 Why it flips: a scoped preservation argument is stronger than structural overlap; finite probes do not establish universal equivalence.
 
@@ -140,7 +140,7 @@ Why it flips: a scoped preservation argument is stronger than structural overlap
 
 ✅ Right: baseline nonempty selection, apply the relevant mutation in an isolated copy, observe the intended assertion reject it, restore exact bytes, and rerun.
 
-Why it flips: an unrelated failure says nothing about the asserted behavior.
+Why it flips: relevance to the claim decides whether the kill is useful. An import failure is inconclusive for numerical accuracy but can be the intended rejection for a packaged-module importability claim.
 
 ### Survivor automatically means inert
 

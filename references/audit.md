@@ -42,7 +42,7 @@ Separate product races from harness faults, fixture leakage, order dependence, r
 
 Delete as redundant only with an argument that surviving reachable evidence supports the same claim with equal or stronger relevant authority, preserves the candidate's material failure paths, and retains required cadence, platform, compatibility, negative-control, and diagnostic roles.
 
-State the argument's fault families, inputs, state histories, and environmental bounds. Equal coverage, broader execution, and representative mutant kills alone cannot prove universal equivalence. Use mutants as supporting probes; if a material unique role remains uncertain, keep that evidence or record the unresolved replacement obligation before any claimed closure.
+State the argument's fault families, inputs, state histories, and environmental bounds. Equal coverage, broader execution, and representative mutant kills alone cannot prove universal equivalence. Use mutants as supporting probes. If a material unique role remains uncertain, retain the evidence until a replacement demonstrates preservation of that role. Earlier removal requires explicit owner authorization to accept the named evidence gap; record that authorization and the outstanding obligation, not a claim of redundancy or readiness. Recording an obligation alone does not authorize deletion.
 
 Retiring a requirement is a different act from removing duplicate evidence. Cite owner authority for a requirement's retirement; a cheaper apparatus does not authorize changing what the product promises.
 

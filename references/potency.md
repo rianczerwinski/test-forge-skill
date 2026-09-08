@@ -27,7 +27,7 @@ Automated mutation tools are useful when supported operators and bounded runtime
 1. Use an isolated copy or repository-approved isolated environment; preserve original bytes and existing user changes. Bind the source, inputs, configuration, and selector relevant to the claim. Avoid live production and external mutations without specific authority.
 2. Run the unchanged baseline with nonempty intended selection. Resolve or separately identify existing failures before attributing a new one.
 3. Apply one named perturbation and verify the exact intended change. Keep time/resource bounds appropriate to the run.
-4. Execute the same evidence path. Inspect which assertion/check rejected it and why. Syntax, import, collection, setup, and unrelated failures are inconclusive for a behavioral claim. A timeout is useful only when it establishes the named timing/liveness failure.
+4. Execute the same evidence path. Inspect which assertion/check rejected it and why. Credit a syntax, import, collection, setup, or timeout failure only when it demonstrates the named violated claim; for example, a missing packaged module can expose a promised importability failure. An unrelated failure that prevents the target behavior from being assessed is inconclusive, whatever its category.
 5. Classify the result, restore exact original bytes/configuration, check the owned diff, and rerun the baseline. Preserve the concise evidence needed to understand the result; retire an isolated disposable copy after that evidence is retained.
 
 ## Interpret results
@@ -40,7 +40,7 @@ Automated mutation tools are useful when supported operators and bounded runtime
 | Wrong observable result passes | Oracle gap; strengthen the relevant observation or acceptance rule |
 | Equivalent behavior or valid fallback passes | Potentially correct acceptance; confirm equivalence within the claimed scope |
 | Correct supported behavior fails | Overspecification, invalid tolerance, or setup defect; repair the test |
-| Infrastructure fails or the run is unavailable | Inconclusive; preserve diagnostics and state the outstanding evidence |
+| A failure prevents assessment of the named claim, or the run is unavailable | Inconclusive; preserve diagnostics and state the outstanding evidence |
 
 Report the first failed attempt separately from reruns. For nondeterministic failures retain inputs, seed, order/history, environment, and relevant timing; a seed is not a complete replay identity.
 
