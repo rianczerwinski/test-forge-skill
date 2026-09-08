@@ -1,46 +1,43 @@
-# The oracle problem, and the two hard cases
+# Oracle authority and numerical evidence
 
-Correctness tests need an independent oracle. In most code the oracle is cheap (a hand-computed value, a raised exception). In numeric / scientific-computing code it is the central difficulty — the *test oracle problem*. This reference works the two cases that recur in numerical, DSP, and ML libraries, and names the established methods that solve them.
+Choose the expected-value authority for the particular claim. Independence limits correlated mistakes; it does not guarantee that the reference, specification, or physical model is correct.
 
-## The oracle problem, named
+## Available authorities
 
-Determining the correct output for a given input is the **test oracle problem**. Barr et al.'s survey classes oracles as *specified* (from a formal spec), *derived* (from some artifact **other than a spec** — a reference implementation, a prior version, other system properties), or *implicit* (heuristic / no explicit expected value). A caution on the word *derived*: it does **not** mean "the code's own output" — the *derived* class spans both the gold-standard differential/pseudo-oracle (a reference implementation, strong) and the prior-version regression golden (weak). What separates them is the reference's **independence from the code under test**, not the derived/specified label. Two general strategies dominate when no direct oracle exists:
+- **Specified or analytic:** an explicit contract, hand calculation, or known result. Check that the asserted behavior follows from the cited authority.
+- **Differential:** compare independently implemented mechanisms on identical inputs. Agreement supports conformance under shared assumptions; common dependencies or shared defects can weaken independence.
+- **Metamorphic:** assert a justified relation between related inputs/outputs. State its preconditions; a relation may hold while absolute values remain wrong.
+- **Captured reference:** preserve trusted reference outputs with input identity, version/model hash, generator, and capture conditions. This retains authority for those cases without rerunning the reference.
+- **Regression capture:** preserve prior behavior without implying independent correctness. Document whether it was independently validated at capture time.
 
-- **Differential testing** — run a second, independently-trusted implementation on the same input and compare. Requires a reference to exist.
-- **Metamorphic testing** — assert a *metamorphic relation* between the outputs of related inputs (scale the input, permute it, add a known offset) when you cannot state the absolute correct output. Requires no reference, only a known relation.
+Compare authority, relevance, input coverage, and freshness; no technique is universally stronger than snapshots. Read [potency.md](potency.md) for sensitivity and valid-alternative checks.
 
-Both are stronger than any snapshot. A golden file is not an oracle unless the golden itself came from one.
+## Model ports and reference cost
 
-## Hard case 1 — the reference-oracle problem (model ports)
+Separate reference conformance from other promises such as error handling, numerical stability, performance, and integration behavior. Matching a reference is one scoped obligation; it does not discharge all product correctness.
 
-A library that reimplements a model in a lighter substrate (numpy forward pass replacing a torch/ONNX model, a hand-rolled DSP kernel replacing a scipy call) makes exactly one correctness claim: **the reimplementation matches the reference.** The only oracle for that claim is the reference itself. The trap is to capture the reimplementation's own output as a "golden" and compare against it — that is circular; it detects change, never correctness, and it is a common way a numeric suite fools itself.
+Choose live test-only reference execution, provenance-locked captures, or vetted upstream vectors according to the claim, drift risk, environment, and cost. A cheap captured-reference routine suite plus a separately reachable live comparison is useful when reference drift matters, but is not compulsory. Keep a reference out of production dependencies when runtime independence is part of the product's purpose.
 
-Resolutions, as a decision fork (surface it; do not pick silently):
+Bind expected data to its actual source and compatible inputs. Regeneration from the port cannot silently retain an independent-reference label. For captured fixtures, preserve the trusted generator and enough input identity to reproduce the case.
 
-- **(a) Reference as a test-only dependency.** CI installs torch/scipy/the reference, regenerates expected outputs *from the reference* every run, compares. This is differential testing done right — the strongest oracle. Heaviest CI. Keep the reference out of the *runtime* dependency set so the library's thesis (no torch at runtime) is preserved; it lives in the dev/test extras only.
-- **(b) Capture-once, provenance-locked.** Generate goldens from the reference *one time*, commit them with a provenance manifest (reference version, model hash, input seed, generator script path), and forbid regeneration from the port. Oracle-at-capture-time: cheap CI, honest label, weaker against silent reference drift.
-- **(c) Vendored reference pairs.** Pull a handful of canonical input→output pairs from the upstream project's own test vectors. Lightest, sparsest.
+## Planted truth and shared mechanisms
 
-A strong default: **(b) for every-run CI + (a) gated behind an env var** (`RUN_ORACLE=1`) for the deep differential check on demand. Honest goldens always; a true reference oracle when asked; no heavy dep in the default path. Whatever you choose, the golden's docstring must state its provenance — a golden whose origin is unstated will be misread as an oracle.
+Generate inputs from an independently justified forward model when testing inverse/estimation behavior. Inspect whether generator and estimator could reproduce the same sign, coordinate, calibration, or modeling mistake.
 
-## Hard case 2 — the independent-generator problem (planted ground truth)
+Keep ground truth flowing from generator to assertion and make the relevant independence visible in the repository. Shared file utilities or unrelated infrastructure need not invalidate it; sharing the mechanism whose correctness is disputed can. Choose one or multiple generators based on the failure families represented, rather than imposing a universal directory or generator count.
 
-DSP / estimation / inversion code is tested on synthetic inputs where the answer is known by construction: a source planted at 45°, mics at chosen coordinates, a signal with a known TDOA. The generative parameters *are* the oracle. This is sound on one condition: **the input must be generated by a forward model independent of the code under test.** The failure mode is feeding the estimator an input derived from the estimator's own math — the test then confirms the code is self-consistent, not correct, and its tolerance can be made arbitrarily tight while measuring nothing.
+Pair synthetic evidence with real observations or additional authorities where model mismatch could defeat the claim. When direct expected outputs are unavailable, use justified relations and state the remaining oracle gap.
 
-The fix is structural, not a tolerance tweak: **one independent scene/input generator**, living in `tests/scenes/` (or the framework equivalent), built from an independent forward model — an analytic delay-and-superpose, an image-source room model, a direct physical simulation. No estimator imports it; every estimator sits strictly on the consuming side. Ground truth flows one way, from generator to assertion, and the generator shares no code path with the inverse it tests.
+## Tolerances and valid alternatives
 
-When even an independent generator is impractical, fall back to metamorphic relations on real captured data (shift all mics by a constant → estimated positions shift by the same constant; rotate the array → DOAs rotate).
+State the measured quantity and units, consequential error limit, known numerical/measurement variability, and supported conditions. Choose tolerances from that error budget, including absolute versus relative behavior near zero. Quantify uncertainty with an appropriate domain method when the claim is statistical.
 
-## The negative control — proving the oracle is live
+Challenge the threshold with relevant wrong outputs and permitted variation. Tightening to an observed noise floor can reject valid implementations; a wide absolute tolerance can be meaningful on a different scale. Avoid deriving a universal threshold from a fixed multiple of the current quantity.
 
-An oracle test with a passing assertion still tells you nothing about sensitivity until you have seen it fail. Pair every consequential accuracy or convergence oracle with a **negative control**: break the mechanism (disable re-estimation, feed the wrong geometry, zero the weights) and assert that the metric degrades past the threshold. If the mechanism can be disabled and the oracle still passes, the oracle is inert.
+Compare unordered outputs under the permitted equivalence, such as speaker-label permutation or valid result order. Verify content/grouping as well as count. Name empirical quality claims honestly rather than presenting a small successful sample as a population guarantee.
 
-Use automated mutation tools where their operators provide useful signal, often computational and branching code. Use hand-chosen claim mutations where the decisive defect lives in a protocol boundary, configuration, artifact, selector, or workflow that a generic source mutator cannot express. Mutation establishes sensitivity; it does not make a circular expected value independent.
+## Negative controls
 
-## A checklist for any numeric correctness test
+Observe a relevant rejection before treating a new consequential oracle as demonstrated sensitive. A pre-fix failing example, controlled bad output, or isolated mechanism mutation can supply it. If a disabled mechanism still passes, determine whether the mutation activated, changed behavior, propagated, and was observed, or whether an allowed fallback preserved the claim.
 
-- Where does `expected` come from? If from the code under test → it is regression, relabel it.
-- Is the input generated independently of the code under test? If not → self-consistency, not correctness.
-- Have I seen this assertion reject a relevant false mechanism? If never → add a negative control or claim-specific mutant.
-- Is the tolerance justified against the quantity's scale? If it is 10× the quantity → it cannot fail; tighten to the noise floor.
-- Does the name claim more than the assertion delivers? If it says *accurate* and asserts `not None` → rename or strengthen.
+Use the shared falsification protocol in [potency.md](potency.md). A killed mutant cannot make a circular expectation independent, and a surviving equivalent implementation is not automatically a test defect.

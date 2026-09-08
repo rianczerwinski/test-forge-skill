@@ -27,9 +27,11 @@ Legitimate authorities include:
 
 Read [oracles.md](oracles.md) when independence, provenance, tolerance, or reference cost is nontrivial.
 
-### Property — soundness across a domain
+### Property — invariant evidence on exercised inputs
 
 A Property test asserts an invariant over examples or generated inputs: symmetry, monotonicity, idempotence, conservation, permutation invariance, boundedness, or round-trip relations. It need not know the exact answer.
+
+State the exercised domain, generator assumptions, and limits. Finite examples do not establish a universal property without additional exhaustive or formal reasoning.
 
 Properties and Oracles complement one another. An implementation can satisfy useful invariants while returning wrong absolute values, and an example oracle can miss a broad input class.
 
@@ -48,7 +50,7 @@ Record provenance so a future maintainer does not promote a snapshot into an Ora
 
 A Contract test checks an API, schema, protocol, exception, serialization form, routing decision, CLI status, or boundary interaction. Contract evidence can legitimately use a test double when the observable claim is which collaborator was invoked with which payload.
 
-Asserting that a mock returned its configured value is not Contract evidence. Asserting that the system routed to the mock correctly is.
+A system correctly routing to a collaborator or passing through its result can establish a Contract even with a configured mock. It does not establish the substituted component's accuracy. Identify whose behavior the assertion actually checks.
 
 ### Smoke — liveness
 
@@ -86,9 +88,9 @@ When no independent Oracle is currently obtainable, record an oracle gap with th
 ## 4. Classification discipline
 
 - Classify the strongest claim each assertion actually supports, not the test name or decorator.
-- Let one test carry multiple kinds only when distinct assertions truly establish them.
+- Describe overlapping roles when justified: an independently validated golden can supply both reference evidence and regression protection. Classify per claim rather than forcing disjoint categories or demanding one assertion per label.
 - Use markers when they improve selection or discoverability in that project; do not make marker presence the evidence.
-- Pair every consequential correctness or convergence claim with a falsifier that demonstrates sensitivity.
+- For consequential new or materially changed evidence, apply the shared potency check in [potency.md](potency.md), accepting a relevant observed pre-fix failure as sensitivity evidence.
 - Keep expected-value provenance adjacent to the test or fixture when it could otherwise be mistaken for independent truth.
 
 The recurring category-collapse smells are worked in [../antipatterns.md](../antipatterns.md): circular goldens, guarded no-op tests, tautologies, decorative tolerances, mock shadows, static greps posing as behavior, and Oracle names on Smoke assertions.

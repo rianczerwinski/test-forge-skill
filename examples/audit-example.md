@@ -2,6 +2,8 @@
 
 ## Input
 
+Historical case-study measurements below describe distinct captured runs, not a fresh verification or one additive collection census. Apply the current decision-before-cost gate before reproducing expensive work.
+
 A local embedding server had 587 collected pytest cases, a routine suite, scheduled model acquisition, platform lifecycle jobs, and a large slow HTTP module. The prompt was to determine whether the suite was trustworthy and how much effort was pointless.
 
 ## Execution census

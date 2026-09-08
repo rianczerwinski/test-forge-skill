@@ -1,113 +1,59 @@
-# AUDIT — determine whether a test apparatus is trustworthy
+# AUDIT — assess a test apparatus
 
-Audit the apparatus in the order that evidence becomes usable: execution, obligations, individual assertions, duplication, and closure. A green result has no meaning until the audit establishes what was selected and which claim the selected evidence can support.
+Diagnose the requested apparatus without changing it unless implementation is authorized. Use the decision/claim record in SKILL.md rather than maintaining a second schema.
 
-## 1. Freeze the baseline
+## Scope and affordable baseline
 
-Bind the source revision and preserve existing user changes. Read the test-runner configuration, dependency groups, project test documentation, and CI/release workflows before running commands.
+Bind the revision and preserve user changes. Read runner configuration, test documentation, dependency groups, and relevant workflows before running commands. Establish the decision and scope before interpreting the current suite as the obligation population. Apply the decision-before-cost gate before expensive acquisition or baseline runs.
 
-Record:
+Record exact applicable commands, environmental gates, collection/selection/result states, warnings, and cost evidence. Use cold/warm timings and setup/call/teardown attribution when initialization matters. Missing optional dependencies are unavailable evidence; install only within authority.
 
-- collected, selected, passed, failed, skipped, expected-failure, deselected, and warning counts;
-- the exact routine command and every documented or CI evidence-plane command;
-- environmental and optional-dependency gates;
-- cold and warm runtime when model, compiler, container, or artifact initialization is material;
-- slowest setup, call, and teardown phases when the runner exposes them;
-- CPU, memory, disk, network, or external-service costs when they can constrain cadence.
+A cheap collection pass can expose hidden default selectors before expensive setup. Collection is not execution, and naming a file does not override every runner default.
 
-Selection is an object of audit. Run collection under the exact marker expression and environment used by CI when feasible. Confirm that a command naming a file actually admits its intended tests; runner-level defaults can still deselect them.
+## Derive the obligation population
 
-Do not install missing optional dependencies merely to make the census look complete unless the task authorizes environment changes. Record the unavailable evidence and where it is expected to run.
+Read claims from owner requirements, specifications, public behavior, architecture, state transitions, incident history, compatibility promises, and deployment commitments. Label inferred risks and historical baselines distinctly. State the bounds, assumptions, and uninspected areas.
 
-## 2. Derive the proof-obligation population
+Trace material failures through the actual boundaries and histories. Include shared fixtures, configuration, generated inputs, and CI selectors where they can invalidate many tests. Explore interacting conditions when there is a causal reason for interaction; neither all combinations nor pairwise combinations are universal defaults.
 
-Read externally meaningful claims from specifications, public APIs, user workflows, architecture, state transitions, incident history, fixed defects, compatibility promises, deployment behavior, and release documentation. Source modules help locate evidence; they are not the population denominator.
+Consume Audit Planes' risk topology when the requested conclusion is whole-system assurance. Keep a bounded apparatus audit scoped to its evidence questions.
 
-For each obligation, record:
+## Evaluate individual potency
 
-```text
-Claim:
-Failure and propagation:
-Truth kind and independent authority:
-Required architectural seam:
-Current evidence and selector:
-Cadence and measured cost:
-Falsifier status:
-Proof limit:
-```
+Apply [potency.md](potency.md) to consequential evidence: validate the setup, trace activation/propagation/observation, inspect authority, and challenge both missed faults and rejected valid behavior. Use [taxonomy.md](taxonomy.md) to describe what the assertions support.
 
-Name propagation far enough to make seam choice possible. “Client request breaks” may decompose into client serialization, TCP transport, server validation, model inference, and response decoding; each can require different evidence.
+The Python scanner can seed a small candidate list. Check its parsed-file, test-function, and error counts before using the result; its population is syntactic, not the runner's admitted tests. Manually inspect high-consequence tests and unsupported patterns regardless of candidate count.
 
-When the requested scope is a systematic whole-codebase or release-readiness assurance audit, consume the risk topology from Audit Planes rather than inventing a second exhaustive census. Test Forge still evaluates and restructures the resulting test evidence.
+Prioritize findings that create false confidence: relevant faults surviving tests; unique evidence never selected; circular expectations or bypassed boundaries; flaky/unavailable evidence; then waste. Each finding names location, claim, delivered evidence, consequence, validation, and proposed disposition.
 
-## 3. Inspect assertion honesty
+## Seams and doubles
 
-Classify what each consequential test actually establishes using [taxonomy.md](taxonomy.md), then compare it with the claim attached to it. Run `scripts/smell-scan.py` on Python suites to seed candidates, and manually inspect all material candidates plus high-consequence tests it cannot understand.
+Determine which independently fallible boundaries each claim requires. Real HTTP policy with a fake model can establish admission behavior; it cannot establish the model's numerical quality. A socket test observes transport that an in-process client bypasses.
 
-Prioritize false confidence over waste:
+Check a double's conformance only to the extent that the conclusion relies on it faithfully representing a dependency. Returning a collaborator's configured value can legitimately test a wrapper's pass-through contract. Confirm which component's behavior was exercised before calling it a mock shadow.
 
-1. a test that stays green through the defect it names;
-2. an external claim whose only evidence is skipped, deselected, stale, or unavailable;
-3. a test whose authority is circular or whose seam bypasses the failure;
-4. unique but flaky or operationally unreachable evidence;
-5. redundant or accidentally expensive evidence.
+## Flaky evidence
 
-Every finding should include location, claimed versus delivered truth, named failure surface, consequence, evidence, and one disposition: fix, strengthen, relocate, merge, delete, or record a proof gap.
+Keep the first attempt and distinguish later retry outcomes. Retain the input, minimized example where available, random seed, dependency/platform identity, prior state/order, and relevant timing. A seed alone cannot reconstruct external state or scheduling.
 
-## 4. Analyze seams and doubles
+Separate product races from harness faults, fixture leakage, order dependence, resource contention, and clock dependence. Quarantine preserves visibility with a named owner/follow-up and an exit condition; exclude its claim from passed evidence until the required execution is reliable. A retry success does not erase the original failure.
 
-For each claim, ask whether the current test crosses too little or too much architecture.
+## Bounded evidential dominance
 
-- **Too narrow:** the test bypasses the boundary where the named defect occurs, such as using an in-process client to claim socket compatibility.
-- **Too broad:** the test loads a real model, database, browser, or external service for a decision already made by validation or routing code.
-- **Well placed:** every real boundary is necessary to observe the failure, and every substituted component is outside the subject of the claim.
+Delete as redundant only with an argument that surviving reachable evidence supports the same claim with equal or stronger relevant authority, preserves the candidate's material failure paths, and retains required cadence, platform, compatibility, negative-control, and diagnostic roles.
 
-Do not rank tests on a unit→integration→end-to-end realism gradient. A narrower Contract test can be authoritative for one claim while a fresh-process Smoke test is necessary for another.
+State the argument's fault families, inputs, state histories, and environmental bounds. Equal coverage, broader execution, and representative mutant kills alone cannot prove universal equivalence. Use mutants as supporting probes; if a material unique role remains uncertain, keep that evidence or record the unresolved replacement obligation before any claimed closure.
 
-## 5. Establish evidential dominance
+Retiring a requirement is a different act from removing duplicate evidence. Cite owner authority for a requirement's retirement; a cheaper apparatus does not authorize changing what the product promises.
 
-Call a test removable as redundant only when another reachable evidence path:
+## Attribute cost and execution gaps
 
-- supports the same claim with equal or stronger authority;
-- preserves every failure surface the candidate can observe;
-- runs at an equal or more useful cadence;
-- retains any negative-control, compatibility, platform, or diagnostic role;
-- and does not merely share line or branch coverage.
+Separate essential costs from repeated setup, unnecessary forwards, arbitrary sleeps, blocked teardown, racy port discovery, irrelevant environment creation, and duplicated matrices. State evidence preserved alongside estimated savings.
 
-Broader execution is not automatically stronger. Coverage-equivalent reduction is not proof-preserving; empirical test-suite-reduction research has found substantial losses in fault detection. When uncertainty remains, keep the test or validate the proposed deletion with representative mutants before removing it.
+Inspect exact selectors, dependencies, workflow steps, and fixture identities on applicable routine/scheduled/release/platform/manual paths. Check the consumer's expected generated-input revision; refresh only if authorized, preserving user-specified snapshots.
 
-## 6. Attribute cost
+## Deliver
 
-Separate essential from accidental cost:
+Return the bounded baseline, significance-first findings, claim-to-evidence map, justified consolidation candidates, and dependency-ordered proposed repairs. Report denominators and uncertainty for any reduction estimate.
 
-- setup repeated across tests that could share an immutable fixture;
-- inference or compilation repeated for compatible inputs that could batch;
-- arbitrary sleeps used as synchronization;
-- teardown waiting for planted blockers or leaked executors;
-- racy free-port discovery instead of passing an already-bound socket;
-- process, environment, or package-manager setup irrelevant to the claim;
-- duplicated matrices repeated at broader seams.
-
-Cost findings state both time saved and evidence preserved. “Delete because slow” is not a valid recommendation.
-
-## 7. Audit reachability and truth states
-
-Inspect configuration, workflow YAML, scripts, dependency installation, environment variables, and generated-artifact steps as part of the apparatus.
-
-- Distinguish pass, expected failure, skip, deselection, empty collection, warning, setup failure, and unavailable environment.
-- Verify scheduled/manual commands contain the selectors required to override routine exclusions.
-- Verify generated fixtures or manifests are refreshed or revision-bound before their consumers run.
-- Promote actionable deprecations or compatibility warnings into dependency/configuration work; do not normalize them through blanket suppression.
-- Ensure documentation names exact commands and the claims each command discharges.
-
-## 8. Deliver the audit
-
-Return:
-
-1. **Baseline:** revision, commands, selection states, timings, environments, and proof limits.
-2. **Significance-first findings:** false confidence and missing evidence before waste.
-3. **Claim-to-evidence map:** obligations, authority, seams, selectors, cadence, falsifiers, and gaps.
-4. **Dominance candidates:** exact delete/merge/relocate opportunities with the evidence-preservation argument.
-5. **Reforge topology:** dependency-ordered changes, without implementing them unless the user authorized refactoring.
-
-Report a redundancy percentage only with an explicit denominator and equivalence method. Treat a clean smell scan as supporting evidence while the claim map, reachability, oracle provenance, and semantic review determine trustworthiness.
+An audit can complete with identified gaps and unimplemented repairs. Call the diagnosis complete only for its assessed scope; state separately whether any readiness or implementation claim remains unsupported.

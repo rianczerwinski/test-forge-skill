@@ -1,154 +1,124 @@
 ---
 name: test-forge
 description: >-
-  Prove software claims with the narrowest test seam that preserves each failure surface, classify what truth the evidence establishes, and verify that the intended tests actually execute. Use whenever writing, adding, running, reviewing, auditing, redteaming, streamlining, or refactoring tests; designing a test strategy or apparatus from first principles; investigating slow, redundant, flaky, skipped, deselected, mock-heavy, or untrustworthy suites; asking what could break and how to test it; or invoking pytest, jest, vitest, go test, cargo test, or another test runner. Routes between a lightweight FORGE path for ordinary test work, AUDIT for diagnosis, and REFORGE for apparatus redesign.
+  Design and refactor software tests around decision-relevant claims, failure-preserving seams, effective assertions, and honest execution evidence. Use when writing, adding, running, reviewing, auditing, streamlining, or refactoring tests; designing a testing apparatus from first principles; investigating slow, redundant, flaky, skipped, deselected, mock-heavy, or untrustworthy suites; asking what could break or whether a test is potent; or invoking pytest, jest, vitest, go test, cargo test, or another test runner. Use FORGE for ordinary test work, AUDIT for apparatus diagnosis, and REFORGE for apparatus redesign; route whole-codebase assurance to Audit Planes.
 ---
 
 # Test Forge
 
-Treat a test suite as a system of proof, not a collection of test functions. Begin from the claim and the failure it must expose; then choose the truth kind, authority, architectural seam, environment, cadence, and falsifier that make the evidence trustworthy.
-
-The governing question is:
-
-> For every in-scope claim, what concrete defect must be observable, and what is the narrowest trustworthy test that would reject it?
-
-Coverage, test count, marker count, realism, and green commands are supporting signals. None establishes that the right behavior was tested or that the intended evidence ran.
-
-## The proof-obligation record
-
-Use this record when designing a consequential test or reasoning about a suite. Keep it mental for obvious local work; write it into a claim-to-evidence map for an audit or refactor.
-
-```text
-Claim:
-Failure and propagation:
-Truth kind and authority:
-Narrowest seam preserving that failure:
-Environment and cadence:
-Measured cost:
-Falsifier or negative control:
-Execution selector and result:
-Remaining proof limit:
-```
-
-The fields constrain one another. A test is misplaced when its assertion is authoritative but its seam cannot observe the named failure, or when its seam is realistic but the assertion establishes only liveness.
-
-## Truth kinds
-
-Truth kind describes what the assertion establishes; it does not describe test size, environment, or cost. Read [references/taxonomy.md](references/taxonomy.md) when classifying a suite or choosing between kinds.
-
-| Kind | Establishes | Authority |
-|---|---|---|
-| **Oracle** | Correctness | Independent reference, specification, hand calculation, analytic result, or independently planted truth |
-| **Property** | Soundness across a domain | Invariant or metamorphic relation |
-| **Regression** | Stability, not correctness | Prior or captured behavior with stated provenance |
-| **Contract** | Interface conformance | Declared API, protocol, schema, or boundary behavior |
-| **Smoke** | Liveness | Successful execution only |
-
-Fuzz/robustness, performance, concurrency, security, compatibility, and lifecycle are orthogonal failure surfaces. Name them when applicable; do not force them into the five functional truth kinds.
-
-## The seam law
-
-Choose the **narrowest authoritative seam that preserves the entire named failure**.
-
-- Test pure transformations directly when no boundary participates in the failure.
-- Cross an in-process application boundary for middleware, routing, validation, and serialization policy.
-- Cross a real socket when transport, client serialization, or connection behavior is the claim.
-- Cross a fresh process or installed artifact when import isolation, entry-point discovery, or packaging is the claim.
-- Cross the real operating-system or external-service lifecycle only when that boundary can fail independently.
-
-Move outward because a boundary adds a distinct failure surface, not because broader execution feels more realistic. Use a controlled fake for an expensive inner component when the outer boundary is the subject; use the real component when its numerics, side effects, or compatibility are the subject.
-
-## Evidence economics
-
-Maximize unique failure signal per unit of developer attention and execution cost. Cost never licenses weaker evidence, but it determines placement and cadence after the failure surface is preserved.
-
-- Measure setup, call, and teardown separately when possible; a fast assertion can hide expensive fixture or executor cleanup.
-- Share immutable expensive setup across compatible claims and batch inputs whose authority is unchanged by batching.
-- Synchronize concurrency and timeout tests on observable events or state; sleep only when elapsed time is itself the behavior under test, and release planted blockers before teardown.
-- Preserve a costly test when it alone observes a failure surface. Remove a cheaper-looking duplicate only after proving it adds no distinct authority, seam, cadence, negative-control role, or failure path.
-- Assign evidence to an edit loop, routine suite, scheduled job, release gate, or explicit manual run according to cost and environmental availability. A test moved out of the routine loop must remain visibly reachable elsewhere.
-
-## The falsifiability law
-
-> An assertion never observed rejecting a relevant false implementation is not yet known to be live.
-
-Use two complementary forms:
-
-- **Claim-specific falsifier:** deliberately break the behavior, boundary, selector, configuration, or workflow named by the claim and confirm the intended check rejects it. Boundary operators, omitted side effects, wrong routing, removed CI selectors, and corrupted manifests can be better mutants than arithmetic changes.
-- **Automated mutation testing:** use a harness where its operators and runtime provide high signal, typically on stable computational or branching logic and on diff-scoped release work. Triage equivalent and low-value mutants rather than optimizing a raw mutation score.
-
-An Oracle test also needs an independently derived expected value; killing a mutant proves sensitivity, not correctness. Read [references/oracles.md](references/oracles.md) for differential, metamorphic, planted-truth, and provenance-locked strategies.
+Build the smallest trustworthy apparatus that answers the actual decision. Connect each scoped claim to its source, material failures, authority, architectural seam, effective assertion, and execution evidence. Treat counts, coverage, realism, and green commands as supporting observations, not substitutes for that argument.
 
 ## Choose the operating mode
 
-### FORGE — ordinary test work
+- **FORGE:** write or change a bounded set of tests, or run an existing suite. For a run-only request, inspect the relevant command and gates, execute within authority and cost limits, and report the actual results. An unchanged routine run does not require a new claim map or mutation campaign.
+- **AUDIT:** diagnose whether the test apparatus supports its claims. Read [references/audit.md](references/audit.md), [references/potency.md](references/potency.md), and [antipatterns.md](antipatterns.md). Return findings and proposed changes; implement only when authorized.
+- **REFORGE:** deeply streamline or redesign the apparatus. Read [references/reforge.md](references/reforge.md), [references/potency.md](references/potency.md), [references/taxonomy.md](references/taxonomy.md), [references/oracles.md](references/oracles.md), and [antipatterns.md](antipatterns.md). Preserve the claims while improving evidence placement, execution, and cost.
 
-Use this path for one test, a bounded code change, or simply running an existing suite.
+For whole-codebase or release-readiness assurance, use Audit Planes for the upstream risk population; Test Forge translates it into test evidence. Redteam owns bounded adversarial review, Repo Refiner owns physical organization/navigation, and Closeout owns unresolved-work capture. Use those skills only when that work is in scope; ordinary testing does not inherit their full procedures.
 
-1. Name the observable claim and a representative defect.
-2. Choose the truth kind and independent authority the claim requires.
-3. Place the test at the narrowest seam that preserves the defect.
-4. Run the smallest command that actually selects the evidence; inspect runner configuration when hidden selectors, optional dependencies, or environment gates can change admission.
-5. Observe a relevant failure before calling a new consequential assertion trustworthy.
-6. State any material proof limit; do not manufacture a suite-wide ledger for routine local work.
+## Start with the decision and claim
 
-### AUDIT — determine whether an apparatus is trustworthy
+Ask what result would change the next action. Distinguish a capability demonstration, regression check, boundary guarantee, and reliability estimate over a population.
 
-Read [references/audit.md](references/audit.md). Audit execution before interpreting green results: configuration, collection, selection, skips, deselection, dependencies, CI commands, warnings, timing, and actual cadence. Then map claims and failure surfaces to evidence, inspect assertion honesty, identify gaps, and establish which costs are dominated.
+Use this record for consequential new evidence or apparatus work. Keep obvious local reasoning brief; write a claim-to-evidence map when the scope or requested trace warrants it.
 
-Use `scripts/smell-scan.py` to seed Python candidates, never as an all-clear. It cannot judge oracle provenance, architectural seams, CI reachability, or semantic redundancy.
+```text
+Decision and pass/fail/inconclusive actions:
+Claim, source, and status (specified / inferred / historical):
+Scope, assumptions, and excluded claims:
+Failure path, including relevant states and interactions:
+Truth kind and expected-value authority:
+Narrowest seam preserving that failure:
+Setup validity, rejected defect, and permitted alternatives:
+Execution command, environment, and cadence:
+Cost estimate or measurement; expansion condition if nonroutine:
+Actual selection/result and falsifier outcome:
+Proof limit or unresolved obligation:
+```
 
-### REFORGE — redesign or deeply streamline a suite
+Derive the failure population from the actual architecture and commitments, not from the existing tests or one-test-file-per-module conventions. Use boundary and state paths to identify relevant omission, corruption, duplication, ordering, timing, partial persistence, stale identity, access, and recovery failures. Apply these as prompts where they participate causally; avoid a compulsory Cartesian checklist. Include shared fixtures, configuration, workflows, and state histories when selecting affected evidence.
 
-Read [references/reforge.md](references/reforge.md), [references/taxonomy.md](references/taxonomy.md), and [references/oracles.md](references/oracles.md). Establish the baseline and proof obligations before editing. Consolidate fixtures, relocate evidence to the right seams, eliminate accidental waiting and repeated setup, repair selection, and remove only tests shown to be evidentially dominated.
+Keep inferred risks distinguishable from owner-approved requirements. A complete map of scoped obligations supports a bounded conclusion; it cannot enumerate every possible failure of arbitrary software.
 
-For a systematic whole-codebase or release-readiness audit, Audit Planes may derive the architectural risk topology first; Test Forge owns translating those risks into executable evidence and refactoring the test apparatus. Do not make an ordinary suite refactor inherit a whole-codebase audit package.
+## Decide before paying
 
-## Reachability is part of truth
+Before costly acquisition, an expensive baseline, or a matrix launch, establish:
 
-A test that exists but is not admitted contributes no evidence.
+- the first informative batch, its chosen conditions, and what it can and cannot establish;
+- pass, fail, and inconclusive actions, including a stopping or expansion condition;
+- available cost evidence, then a bounded throughput sample if measurement is needed;
+- projected setup, execution, teardown, resource cost, and an authorized bound;
+- overlap with later stages and reuse bound to compatible code, configuration, inputs, and evidence identities.
 
-- Record collected, selected, skipped, deselected, expected-failure, and warning states separately.
-- Execute the exact CI or documented command when selection semantics matter. Naming a file may still inherit a default marker exclusion.
-- Verify optional dependency groups and environment gates are installed where their evidence is claimed.
-- Treat an unexpected skip, deselection, warning, empty collection, or stale generated artifact as a distinct state, not a pass.
-- Replace generic “full suite” language with exact evidence-plane commands and explicit proof limits.
+Estimate before measuring when measurement itself is expensive. Enforce declared budgets, selectors, and admission conditions in existing runner/job mechanisms where feasible. Human judgment supplies which experiment is informative; a generic validator cannot infer that from a filled-out template. If cost or sampling assumptions fail, revise the next batch before expanding. A two-case gate is no more universal than a full survey.
 
-## Closure
+## Place and classify the evidence
 
-A test task closes when its scoped claim has authoritative, reachable evidence and a relevant falsifier. An apparatus audit or refactor closes only when:
+Choose the **narrowest authoritative seam that preserves the entire named failure**. Select boundaries by their independent failure surfaces: pure computation; in-process application policy; threads/processes; sockets/IPC; built artifacts; real dependencies; operating-system lifecycle; user journeys. These are choices, not a fixed realism ladder.
 
-- every in-scope claim and material failure surface has evidence or an explicit proof gap;
-- each test runs at a seam capable of observing its named failure;
-- exact routine, scheduled, release, and manual selectors are documented and selection-checked;
-- representative false implementations, configurations, or workflows are rejected;
-- skips, deselections, warnings, unavailable environments, and external evidence are reported honestly;
-- retained expensive tests have a named unique function and removed tests were proven dominated;
-- the final result survives the relevant commands without weakening assertions, selectors, or thresholds.
+Substitute expensive components outside the claim when their doubles preserve its failure conditions. When a conclusion depends on a double representing a real dependency, check the relevant conformance and assumptions. A routing stub need not earn the authority of a full dependency emulator.
 
-Passing tests are candidate evidence for closure, never closure by themselves.
+Truth kinds describe assertions, independently of size or cadence. Read [references/taxonomy.md](references/taxonomy.md) for classification and [references/oracles.md](references/oracles.md) for nontrivial oracle choices.
 
-## Reasoning trace for apparatus changes
+| Kind | Evidence supports | Authority |
+|---|---|---|
+| Oracle | Correctness for exercised cases under stated assumptions | Independent reference, specification, calculation, or planted truth |
+| Property | An invariant/relation on exercised inputs | Independently justified invariant or relation |
+| Regression | Stability against a named baseline | Prior behavior with capture/validation provenance |
+| Contract | Declared boundary behavior | API, protocol, schema, or interaction commitment |
+| Smoke | Successful representative execution | Observed startup, import, or completion |
 
-For a material refactor, record consequential decisions rather than narrating every edit:
+Record fuzz/robustness, performance, concurrency, security, compatibility, and lifecycle as additional risk dimensions. Neither a marker nor a truth-kind label guarantees adequacy.
 
-| Choice | Evidence and reasoning | Rejected alternative | Validation |
-|---|---|---|---|
+## Explicit potency check
 
-Also retain the baseline, final commands and results, adversarial mutations, and proof limits. Write this trace into the repository only when it has continuing operational or review value, or when the user asks for it; otherwise report it conversationally. A ledger that records routine renames and formatting is audit theatre.
+For a new or materially changed consequential assertion, engage this question directly: **does it reject the relevant wrong behavior while accepting permitted behavior?**
 
-## Anti-patterns
+Trace setup → fault reached → incorrect state → propagation → observed rejection. Verify the setup actually activates the intended conditions, and inspect tolerances, ordering, identity, nondeterminism, and doubles for accidental exclusion of correct alternatives. Read [references/potency.md](references/potency.md) for the shared procedure, including safe falsification and outcome triage.
 
-Read [antipatterns.md](antipatterns.md) when auditing or reforging. It pairs category collapses with apparatus-level failures such as realism gradients, selector illusions, marker quotas, planted sleeps, and reduction by count.
+A relevant observed pre-fix failure can establish sensitivity. Otherwise use a targeted isolated falsifier; use automated mutation campaigns when their additional signal justifies the cost. A mutation killed by an unrelated import failure supplies no behavioral evidence. Sensitivity, oracle authority, and the scope of fault coverage are separate questions.
+
+## FORGE for changed tests
+
+1. Name the scoped claim, its authority, and a representative defect.
+2. Choose the failure-preserving seam and valid setup.
+3. Design the assertion to reject that defect and accept permitted alternatives; apply the potency check in proportion to consequence.
+4. Run the smallest command selecting the affected evidence, including shared-fixture/configuration impact.
+5. Inspect the actual result and material proof limits. Preserve relevant failing evidence before repairing it.
+
+Keep ordinary work conversational unless a durable trace is requested or has continuing maintenance value.
+
+## Execution and economics
+
+- Record collection, selection, pass, failure, skip, deselection, expected failure, warnings, and unavailable environments distinctly. Naming a file may still inherit a default exclusion.
+- Run exact documented/CI selectors where admission matters; verify required dependencies and generated-input identities before crediting their evidence. Report unavailable evidence without installing or refreshing anything beyond the task's authority.
+- Retain the first failure and report retries separately. Use input, seed, order/history, environment, and timing evidence to distinguish product failures from harness instability. Quarantine has an owner and exit condition and remains a proof gap.
+- Measure setup, call, and teardown when cost matters. Share immutable setup and batch compatible work without changing the claim or hiding diagnostic detail.
+- Synchronize on events/state, or on time when elapsed time is the subject. Release planted blockers before teardown.
+- Retain expensive evidence with a unique role; move it to a reachable cadence when appropriate. Delete only with the bounded dominance argument in the audit reference.
+
+Use `scripts/smell-scan.py` only to seed Python review candidates. It reports inspection failures separately and exits `2` for incomplete inspection or no named tests. Exit `0` means inspection completed, with or without candidates; its function count is not runner collection. Review semantics, authority, seams, and selection independently.
+
+## Closure and reasoning
+
+- **Diagnosis complete:** the requested population has been assessed; findings, uninspected areas, and proof gaps have explicit dispositions. This does not imply that repairs or system readiness are complete.
+- **Implementation complete:** the authorized changes preserve the scoped obligations, pass the affected reachable checks, and survive relevant falsification. Unavailable required evidence limits the completion claim; report the precise remaining obligation.
+- **Readiness established:** the independently sourced readiness obligations are discharged at the required environments and cadence. A captured gap is preserved, not discharged.
+
+For a consequential refactor, retain a compact choice/evidence/rejected-alternative/validation trace, baseline and final commands, deletion arguments, falsifier outcomes, and proof limits. Record claim changes separately from apparatus changes. Mutants designed alongside the tests demonstrate those particular detections; they do not calibrate recall on unseen defects.
 
 ## Additional resources
 
-- [references/audit.md](references/audit.md) — execution census, evidence census, dominance analysis, and audit output.
-- [references/reforge.md](references/reforge.md) — suite redesign, seam placement, cost shaping, reachability repair, and closure.
-- [references/taxonomy.md](references/taxonomy.md) — the five truth kinds, orthogonal surfaces, and conditional module heuristics.
-- [references/oracles.md](references/oracles.md) — independent oracle construction and falsification.
-- [references/lineage.md](references/lineage.md) — prior-art lineage and the method’s novelty boundary.
-- [references/final-review.md](references/final-review.md) — maintenance consultation, reproduced helper defects, and pending revision recommendations; not operative instructions.
-- [examples/audit-example.md](examples/audit-example.md) — execution-first audit example.
-- [examples/refactor-example.md](examples/refactor-example.md) — proof-obligation-driven apparatus refactor.
-- `scripts/smell-scan.py` — Python AST heuristic that emits review candidates, not verdicts.
+- [references/audit.md](references/audit.md) — population, execution census, potency, flaky evidence, and bounded dominance.
+- [references/reforge.md](references/reforge.md) — authorized suite redesign and cost shaping.
+- [references/potency.md](references/potency.md) — individual test potency, permitted behavior, and isolated falsification.
+- [references/taxonomy.md](references/taxonomy.md) — assertion kinds and orthogonal risks.
+- [references/oracles.md](references/oracles.md) — authority, independence, snapshots, and numerical error budgets.
+- [references/lineage.md](references/lineage.md) — primary prior art, composition, and search limits.
+- [antipatterns.md](antipatterns.md) — paired failure patterns for auditing and reforging.
+- [examples/audit-example.md](examples/audit-example.md) — historical execution-first audit.
+- [examples/refactor-example.md](examples/refactor-example.md) — historical apparatus refactor.
+- [examples/potency-example.md](examples/potency-example.md) — decision gate and speaker-grouping potency.
+- [references/final-review.md](references/final-review.md) — revision reasoning and validation record; maintenance only.
+- [scripts/smell-scan.py](scripts/smell-scan.py) — Python syntax candidate scanner; run on selected test paths.
+- [scripts/test_smell_scan.py](scripts/test_smell_scan.py) — dependency-free helper regressions; run with `python3 -B scripts/test_smell_scan.py` from this skill directory.

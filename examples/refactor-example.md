@@ -1,10 +1,10 @@
 # Worked example — proof-obligation-driven apparatus refactor
 
-This example continues the embedding-server audit in [audit-example.md](audit-example.md). The refactor’s target was not a smaller suite; it was a denser and more reachable system of proof.
+This historical case continues the embedding-server audit in [audit-example.md](audit-example.md). Its measurements describe captured runs, not a current verification. The refactor targeted denser, more reachable evidence.
 
 ## Governing invariant
 
-Every retained cost must buy a named failure signal. Every removed test must be dominated on claim, authority, seam, cadence, and falsification role—not merely duplicate line coverage.
+Every retained cost must buy a named failure signal. Every removed test needs a bounded preservation argument covering claim, authority, failure families, inputs/histories, environment, cadence, and falsification role. Matching coverage or killing selected mutants alone cannot establish universal equivalence.
 
 ## Choice ledger
 
@@ -33,7 +33,7 @@ The apparatus documented exact routine, acceptance, real-model, numeric-parity, 
 - Routine plane: 537 passed, 2 optional modules skipped, 18 slow tests deselected, no warnings, 20.13 seconds.
 - Irreducible real-model plane: 7 passed in 17.61 seconds with one shared model load.
 - Claim mutations: the inclusive token-boundary error and removed lifecycle selector were both rejected.
-- Mechanical smell scan: no remaining candidates, explicitly treated as supporting evidence rather than an all-clear.
+- Mechanical smell scan at the time: no remaining candidates. The helper was subsequently found to misclassify several legitimate shapes and collapse parse errors into successful summaries; its regression suite now covers those defects. The historical scanner result supplies no independent assurance.
 - Production source: unchanged.
 
 The refactor added routine real-TCP coverage while becoming faster. That is evidence density: fewer broad repetitions, more exact boundaries, and no hidden claim that every environment ran locally.
