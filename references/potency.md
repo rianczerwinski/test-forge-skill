@@ -22,6 +22,8 @@ Start with a real pre-fix failure when it matches the current claim and conditio
 
 Automated mutation tools are useful when supported operators and bounded runtime add signal. Triage survivors rather than pursuing a universal score. A broad campaign is warranted by the task's stakes or demonstrated missing detections, not by the mere existence of a test file.
 
+Choose accidental faults from the actual engineering workflow as well as observed incidents; a deliberately bad fixture does not assert a malicious actor. Keep the perturbation causally tied to the decision. Where governing closure instructions require a false case per claim, meet that requirement with relevant bounded falsifiers; the ordinary pre-fix-evidence option does not waive it. Checkers of checkers earn their place through a named material failure of the evidence path, not an automatic recursion depth.
+
 ## Isolated falsification protocol
 
 1. Use an isolated copy or repository-approved isolated environment; preserve original bytes and existing user changes. Bind the source, inputs, configuration, and selector relevant to the claim. Avoid live production and external mutations without specific authority.

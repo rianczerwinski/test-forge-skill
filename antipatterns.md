@@ -4,7 +4,7 @@ Use these contrasts to inspect claims and failure paths, not to classify tests f
 
 ## Contents
 
-Authority and assertion potency; experiment sizing; seams and execution; reduction and closure.
+Authority and assertion potency; experiment sizing; seams and execution; reduction and closure; assurance calibration.
 
 ### Circular golden
 
@@ -173,3 +173,51 @@ Why it flips: absence of findings in unreadable material is absence of evidence.
 ✅ Right: complete the bounded diagnosis while naming unmet readiness obligations separately; close readiness only when its required evidence is discharged.
 
 Why it flips: preservation of uncertainty and resolution of uncertainty are different outcomes.
+
+### Product label substitutes for consequence
+
+❌ Wrong: “It's an audio library, so persistence checks are excessive”; or “agents wrote it, so every edit requires maximum assurance.”
+
+✅ Right: trace the actual failure, exposure, visibility, recovery, and existing protection. Scale effort to the operation: a display typo and deleting the only recording have different consequences.
+
+Why it flips: category and authorship are prompts for inspection, not evidence of a particular risk level.
+
+### Assurance earns another assurance layer
+
+❌ Wrong: add a checker of each checker indefinitely, or mandate the same number of independent reviews for every claim.
+
+✅ Right: name the material doubt and the different evidence that could change the decision. Challenge consequential weaknesses, satisfy governing closure requirements, and stop with explicit limits when another layer has no justified distinct role.
+
+Why it flips: depth follows a failure of the evidence path; counting layers cannot establish independence or completeness.
+
+### Moving the goal manufactures progress
+
+❌ Wrong: loosen the quality threshold after seeing a failure, report improvement, and hide a protected-case regression in the average.
+
+✅ Right: justify any criterion change against actual use and owner commitments, evaluate comparable candidates, and report the protected failure separately.
+
+Why it flips: a change in the measure is a different claim from a change in the measured object.
+
+### Quiet protection looks disposable
+
+❌ Wrong: retire a cheap recovery regression because it has found no new defects this quarter.
+
+✅ Right: retain its prevention and compatibility value unless a reachable replacement preserves its role or the requirement is legitimately retired.
+
+Why it flips: a useful control's value includes failures prevented and guarantees preserved, not only fresh findings.
+
+### Different model becomes independent evidence
+
+❌ Wrong: give three agents the same completion summary and assign their agreement triple evidentiary weight.
+
+✅ Right: identify shared assumptions and inspect original requirements, results, and the actual operating path where those resolve the doubt. Credit different scrutiny only for what it actually examined.
+
+Why it flips: model identity and assigned posture do not establish independent sources, observations, or error rates.
+
+### Calibration becomes compulsory ceremony
+
+❌ Wrong: produce a risk matrix and new evidence ledger before every run of an unchanged local test.
+
+✅ Right: use the known command and gates, report its actual result, and expand calibration only when the decision, consequence, uncertainty, or apparatus calls for it.
+
+Why it flips: the methodology's own burden belongs in the optimization; the form is not the assurance.

@@ -2,6 +2,16 @@
 
 Implementation record: `20260908T100858Z`. The user approved the complete revision plan. The pre-change skill and original consultation remain recoverable at repository commit `481e850d4b12a5735a0380d1a095f2c233463f42`. This is a maintenance record, not a second operative procedure.
 
+## Contents
+
+- [Disposition of the consultation](#disposition-of-the-consultation)
+- [Helper evidence](#helper-evidence)
+- [Adversarial restoration checks](#adversarial-restoration-checks)
+- [Behavioral and packaging checks](#behavioral-and-packaging-checks)
+- [Bounded review repairs](#bounded-review-repairs--20260908t105028z)
+- [Assurance calibration revision](#assurance-calibration-revision--20260922t174310)
+- [Continuing limits](#continuing-limits)
+
 ## Disposition of the consultation
 
 | Concern | Implemented home | Reasoning and rejected alternative |
@@ -84,6 +94,48 @@ The first installed-path check selected Python 3.9.6 rather than staging's 3.14.
 Current helper SHA-256: `f2809420527b61a0ec1360c1afa825d8ad37c9993fa693862bfe4c81b351ba64`. Current regression-source SHA-256: `77c0c04a4f67e0b98cdf792ece9dd8f59d5331e077f41dc06f5024e0572575ba`. Use the reproduction command above. One fresh-context evaluator assessed the four supplied guidance scenarios without intended answers or this record; no material ambiguity changed its dispositions. This checks interpretation of hypothetical observations, not execution of packaging or recovery tests.
 
 Frontmatter, local links, paired examples, Python syntax, provider resolution, and the unchanged 124-line entrypoint passed packaging checks. `skills-ref` remained unavailable; the installed Skill Creator validator and direct checks supplied bounded packaging evidence. Source-decoding/traversal prior art is maintained in [lineage.md](lineage.md). The repairs add no dependency, production-suite change, or mandatory user workflow.
+
+## Assurance calibration revision — 20260922T174310
+
+The user requested a Test Forge revision incorporating the discussion of proportionate assurance and both Pagani dimensions. The source tree was clean within this skill at shared-shelf revision `818d8335a00e41e48274b880d036a34799368f1d`; unrelated repository changes were outside the concern. The existing domain and public-skill prior art was extended with primary assurance, stopping, decision-error, and evidence-dependence sources in [lineage.md](lineage.md).
+
+| Requirement | Operative home and preservation decision |
+|---|---|
+| Reground the scale without another standalone skill | CALIBRATE in SKILL.md; [calibration.md](calibration.md); retained FORGE, AUDIT, and REFORGE |
+| Address both insufficient protection and excessive burden | Entrypoint objective and calibration: consequences, existing controls, total burden, false rejection, and prevention value |
+| Examine the criterion as well as assertion sensitivity | Decision/claim record, oracle reference, stable comparison criteria, protected qualities, and separation of observations/inferences/commitments |
+| Ground deliberate false cases in real engineering failures | Potency guidance and bounded examples; no hypothetical malicious actor or universal mutation quota |
+| Preserve independent authority and actual-use evidence | Default-entry-path guidance; source/mechanism/observation independence; explicit limits on repeated model agreement |
+| Bound recursion and know when to stop | Named material doubt, different useful evidence, governing closure requirements, and distinct supported/failed/inconclusive outcomes |
+| Preserve useful capabilities while simplifying | Existing bounded dominance rule plus prevention and diagnostic value; source/candidate preservation until replacement evidence exists |
+| Preserve previous testing competence | Existing taxonomy, seam selection, double conformance, actual runner admission, oracle authority, RIPR potency, permitted alternatives, flaky evidence, budgets, and closure distinctions remain operative |
+
+All pre-existing files were retained. Source-to-destination review of replaced passages found their substantive instructions preserved in the revised entrypoint; supporting changes were additive. Both Python files remained byte-identical to the baseline. The historical audit, refactor, and potency examples retain their original measurements and limits. Six constructed calibration examples and six paired antipatterns supply maintenance cases without claiming executable validation of judgment.
+
+### Behavioral forward check
+
+One fresh-context read-only evaluator received the staged entrypoint and access to operative references, plus eight hypothetical requests. It did not receive this conversation, intended answers, examples, antipatterns, or this record. Skill Creator's conditional forward-test procedure supplied the review method.
+
+| Supplied case | Observed judgment |
+|---|---|
+| Unchanged two-second parser test run | FORGE run-only; inspect selector/gates, execute within authority, report actual outcomes; no added assurance ceremony |
+| Moved link with repository-mandated falsification | Resolve target/anchor and reject an isolated broken link; preserve the rule without building a framework |
+| Passing DSP components with untested default command | Withhold operational sign-off; observe the assembled default path and bound liveness versus quality claims |
+| Mocked export acknowledgement before deleting the only original | Treat preservation as consequential; prefer eliminating premature deletion and use real-storage evidence with disposable content |
+| Faster suite, relaxed tolerance, protected regression, quiet recovery test | Keep criteria comparable, surface the protected failure, and retain unique recovery protection until a replacement earns its role |
+| Repeated agent approval of a migration summary | Change the source evidence examined; compare source qualifications with destinations before deletion; no confidence multiplier |
+| Five successful cases at budget limit with required devices missing | Stop the run within authority; keep the reliability requirement inconclusive |
+| Shared fixture fault affecting five modules | Investigate the implicated family and regression protection; neither stop after one passing test nor automatically audit everything |
+
+The evaluator found no consequential ambiguity in the operative instructions it reviewed. This is one qualitative interpretation exercise over eight scenarios, not eight independent trials, a comparison against the previous skill, or execution of those scenarios. Final editorial changes scoped the trigger to engineering and clarified required-content preservation in the example; neither changes the evaluated method.
+
+### Structural and regression checks
+
+The installed Skill Creator frontmatter validator passed on the staged skill. Direct structural checks resolved local destinations and anchors, confirmed all 15 supporting resources are indexed from the 142-line entrypoint, and checked all 27 paired antipatterns. In an isolated copied tree, a nonexistent calibration link was rejected by the link check and an invalid skill name by the actual frontmatter-validator CLI. The copied tree was discarded after these observations; no production files were mutated.
+
+The unchanged helper's actual regression entry point, `python3 -B scripts/test_smell_scan.py`, passed all 35 tests without skips on the implementation host. This confirms retained helper behavior; it supplies no validation of the new prose's real-world effectiveness. `skills-ref` was unavailable, so no result from that tool is claimed. No new executable, dependency, schema, controller, or workflow engine was introduced.
+
+Trigger review covered running existing tests, writing a boundary test, auditing a misleading suite, refactoring expensive setup, calibrating excessive assurance, designing a migration checker, and deciding when a reliability run can stop. Countertriggers were general product positioning, emotional reassurance, and whole-system readiness without a bounded apparatus question; those remain outside this skill or route to the appropriate upstream method. This is metadata review, not measured discovery recall.
 
 ## Continuing limits
 

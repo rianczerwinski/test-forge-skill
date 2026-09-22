@@ -2,6 +2,8 @@
 
 Choose the expected-value authority for the particular claim. Independence limits correlated mistakes; it does not guarantee that the reference, specification, or physical model is correct.
 
+First establish that the criterion represents the intended use and explicit commitments. A perfectly enforced proxy can be the wrong target. Distinguish a proposed reinterpretation from owner authority and report criterion changes separately from improvements measured under them.
+
 ## Available authorities
 
 - **Specified or analytic:** an explicit contract, hand calculation, or known result. Check that the asserted behavior follows from the cited authority.
@@ -11,6 +13,8 @@ Choose the expected-value authority for the particular claim. Independence limit
 - **Regression capture:** preserve prior behavior without implying independent correctness. Document whether it was independently validated at capture time.
 
 Compare authority, relevance, input coverage, and freshness; no technique is universally stronger than snapshots. Read [potency.md](potency.md) for sensitivity and valid-alternative checks.
+
+Assess dependence through shared sources, assumptions, mechanisms, and observations. Several agents repeating a source or inheriting the same implementation summary do not supply a confidence multiplier. A different model can contribute a useful interpretation; establish what evidence or failure search is actually different before claiming independence.
 
 ## Model ports and reference cost
 

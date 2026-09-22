@@ -6,7 +6,11 @@ Preserve scoped claims while improving test authority, potency, placement, runti
 
 Use [audit.md](audit.md) for an affordable baseline and obligation population. Apply the decision-before-cost gate before any expensive baseline. A broken test can expose either a product defect or an apparatus defect; determine which before editing.
 
+Apply [calibration.md](calibration.md) before selecting the replacement. Optimize assurance and the cost of operating it together, including false alarms and coordination. First consider whether simplifying the product or enforcing an invariant at its owner eliminates a failure opportunity; propose production changes separately when outside authority. A redesign need not add machinery, and a healthy part need not change.
+
 Map claims to authority, material failure paths, seams, selectors, cadence, and proof limits. Group common setup after identifying these obligations. Source modules provide navigation, not an automatic completeness denominator.
+
+Keep comparison criteria stable and name protected qualities. Preserve the baseline or candidate with a unique useful role until the replacement demonstrates that role. Report justified criterion changes separately; do not bury lost guarantees inside a faster runtime or higher aggregate score.
 
 ## Choose boundaries by the failure
 
@@ -46,3 +50,5 @@ Check permitted transformations too: reordered labels, equivalent implementation
 Retain the choice/evidence/rejected-alternative/validation trace requested by the user or needed for maintenance, including before/after commands, bounded deletion arguments, falsification, and proof limits. Run affected checks, inspect the diff for weakened assertions/selectors, and remediate failures before closing.
 
 Report completed implementation separately from system readiness. A refactor may preserve an existing explicitly unavailable evidence plane; it cannot report that plane as passed or silently retire its obligation.
+
+Recalibrate after a finding changes the failure population; investigate implicated siblings without expanding automatically to the whole system. Honor governing closure checks, then stop when the scoped evidence is supported and no named material doubt warrants another distinct check. Remove proven redundant scaffolding while retaining evidence needed to understand, reproduce, or maintain the result.

@@ -2,6 +2,21 @@
 
 Test Forge composes established methods. Its value is the operational synthesis, not a claim that the underlying ideas are new.
 
+## Contents
+
+- [Claims and evidence](#claims-and-evidence)
+- [Test seams, size, and cadence](#test-seams-size-and-cadence)
+- [Selection, prioritization, and reduction](#selection-prioritization-and-reduction)
+- [Oracles and mutation](#oracles-and-mutation)
+- [Local composition boundary](#local-composition-boundary)
+- [Distinct synthesis](#distinct-synthesis)
+- [Potency and permitted change](#potency-and-permitted-change)
+- [Decision-relevant experiments and unreliable evidence](#decision-relevant-experiments-and-unreliable-evidence)
+- [Closest public skills](#closest-public-skills)
+- [Search record and limits](#search-record-and-limits)
+- [Python helper implementation](#python-helper-implementation)
+- [Assurance calibration](#assurance-calibration)
+
 ## Claims and evidence
 
 The [OMG Structured Assurance Case Metamodel](https://www.omg.org/spec/SACM/2.2/PDF) formalizes claims, argumentation, evidence, evidence provenance, and incomplete assurance cases. Test Forge adopts the lightweight claim→evidence discipline but does not require a formal assurance-case model for ordinary software testing.
@@ -30,9 +45,11 @@ Test Forge does not duplicate those exhaustive mutation or general quality-bar w
 
 ## Local composition boundary
 
-The local `audit-planes` skill owns census-backed, whole-codebase assurance and architectural risk topology. Test Forge owns the test apparatus: translating scoped claims and risks into authoritative, reachable, economical, falsifiable evidence. A whole-codebase audit may feed Test Forge; an ordinary test refactor does not require an Audit Planes outpost.
+The local `audit-planes` skill owns census-backed, whole-codebase assurance and architectural risk topology. Test Forge owns the assurance apparatus for scoped decisions: calibrating and translating claims and risks into authoritative, reachable, economical, falsifiable checks. This includes test suites and executable validators used by workflows; it does not make Test Forge the owner of those workflows. A whole-codebase audit may feed Test Forge; an ordinary test refactor does not require an Audit Planes outpost.
 
 Redteam owns bounded adversarial review under actual operating conditions; Repo Refiner owns physical structure and navigation; Closeout owns unresolved-work capture and commit sequencing; Skill-skill owns canonical authoring and provider discovery. These are conditional composition boundaries, not mandatory dependency chains for routine tests.
+
+Recompass supplies broader assessment of direction and governing assumptions. Test Forge questions criteria to establish a valid test decision, preserving the distinction between observed behavior, inferred intent, and owner commitments. It does not absorb business strategy, identity work, or the entire Recompass suite. Calibration stays within Test Forge because apparatus design and the judgment of how much apparatus is warranted share the same decision, failure paths, and evidence.
 
 ## Distinct synthesis
 
@@ -95,3 +112,23 @@ The final two combination/ancestral families added corroboration without a new c
 ## Python helper implementation
 
 The bounded repair review on `20260908` reused the domain and skill-ecosystem reconciliation above and checked Python's primary [source-decoding API](https://docs.python.org/3/library/tokenize.html#tokenize.open) and [AST traversal API](https://docs.python.org/3/library/ast.html#ast.NodeVisitor). `tokenize.open` supplies encoding-cookie and UTF-8 BOM handling; the scanner limits its iterative walk to statement containers rather than recursively visiting irrelevant expressions. These are standard-library enablers, not new parsing mechanisms. The posture remains a local repair of Test Forge; no renewed whole-skill novelty claim or broad ecosystem survey was needed.
+
+## Assurance calibration
+
+The calibration synthesis adapts these methods; their original regulatory duties, mathematical assumptions, and institutional overhead do not automatically transfer to ordinary software work.
+
+| Primary source | Mechanism reused and operative home | Transfer limit |
+|---|---|---|
+| FDA, [Computer Software Assurance](https://www.fda.gov/regulatory-information/search-fda-guidance-documents/computer-software-assurance-production-and-quality-management-system-software), February 2026 | Risk-based assurance and additional rigor where warranted → calibration's actual-use and consequence analysis | Guidance for medical-device production/quality systems; an analogue for choosing effort, not a regulatory obligation imposed on unrelated projects |
+| FDA, [Least Burdensome Provisions](https://www.fda.gov/regulatory-information/search-fda-guidance-documents/least-burdensome-provisions-concept-and-principles), 2019 | Necessary information for the relevant decision, efficient methods and lifecycle timing while preserving requirements → entrypoint objective and total-burden analysis | “Least burdensome” does not authorize lowering a required standard; the portable design choice is this skill's synthesis |
+| [NASA-STD-8739.8B](https://standards.nasa.gov/sites/default/files/standards/NASA/B/0/NASA-STD-87398-Revision-B.pdf), §§1.1, 4.4.2.1, 4.5 | Coordinate to avoid duplication; scope and revise assurance rigor according to software risk → recalibration and bounded sibling investigation | NASA's assurance and tailoring authority remain specific to NASA; no universal grade count is imported |
+| Dalal and Mallows, [When Should One Stop Testing Software?](https://doi.org/10.1080/01621459.1988.10478676), 1988 ([author-uploaded paper](https://www.researchgate.net/publication/248429057_When_Should_One_Stop_Testing_Software)) | Compare continued testing cost with expected residual losses → calibration's marginal-value question | The mathematical stopping result depends on explicit stochastic and economic assumptions. The skill uses a qualified qualitative judgment when those inputs are unavailable, not a fabricated optimum |
+| [JCGM 106:2012](https://www.bipm.org/documents/20126/2071204/JCGM_106_2012_E.pdf), §§8–9 | Decision rules can falsely accept nonconforming results or reject conforming ones → potency's permitted alternatives and oracle error budgets | Measurement uncertainty methods apply under their models; the transferable concern is both directions of decision error, not a universal tolerance |
+| Littlewood, Popov, Strigini, and Shryane, [Combining diverse software fault detection techniques](https://openaccess.city.ac.uk/id/eprint/1626/), 2000 | Dependence affects the gain from combining fault-finding methods → source/mechanism/observation independence | This is not empirical calibration of modern agent models. No fixed confidence multiplier follows from changing models or repeating a review |
+| Bloomfield and Rushby, [Assessing Confidence with Assurance 2.0](https://openaccess.city.ac.uk/id/eprint/29444/), 2022 | Positive support, counterarguments, and residual doubts → explicit material doubts and bounded closure | Test Forge borrows the questions without requiring their formal assurance-case calculus or claiming logical proof from finite tests |
+
+The earlier investigation also considered Rae et al.'s [Safety clutter](https://doi.org/10.1080/14773996.2018.1491147), 2018. Its duplication/generalization/overspecification framing is an adjacent organizational analogue. The current extension could retrieve a search excerpt but not its full text; it is supporting context, not the sole basis for a rule. The operative retirement rule continues to require demonstrated preservation or loss of function, rather than a low finding count.
+
+Bounded extension date: `20260922`. This revision reused the retained domain investigation and the previously inspected public-skill comparison above, re-inspected the canonical Test Forge plus its local caller references, and rechecked the primary FDA, NASA, JCGM, diverse-detection, and Assurance 2.0 sources. Targeted searches for `"When Should One Stop Testing Software" Dalal Mallows 1988` and `"Safety clutter" "duplication" Rae Provan Weber Dekker` supplied the stopping model and the access limitation above. No new broad marketplace survey or empirical comparison of skills was performed. The decision is to extend the existing skill with CALIBRATE, not claim a new method or create a parallel skill.
+
+The two-axis Pagani objective, protected-quality and owner-authority distinctions, criterion stability, and incidental-friction discipline come from the user's requirements and the local Recompass discussion. Their integration with these research lineages is a design synthesis, not a claim that one cited source establishes the whole procedure. Artifact quality and actual use govern the work; maximizing market adoption is not substituted for them.

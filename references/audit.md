@@ -6,6 +6,8 @@ Diagnose the requested apparatus without changing it unless implementation is au
 
 Bind the revision and preserve user changes. Read runner configuration, test documentation, dependency groups, and relevant workflows before running commands. Establish the decision and scope before interpreting the current suite as the obligation population. Apply the decision-before-cost gate before expensive acquisition or baseline runs.
 
+Apply [calibration.md](calibration.md) to the apparatus's consequence and total burden. Inspect both unsupported confidence and needless control: false alarms, invalid rejection of supported behavior, repetitive assurance, and coordination cost. Assess the actual operation rather than assigning one risk grade to the whole product. A healthy apparatus can legitimately receive a no-intervention conclusion.
+
 Record exact applicable commands, environmental gates, collection/selection/result states, warnings, and cost evidence. Use cold/warm timings and setup/call/teardown attribution when initialization matters. Missing optional dependencies are unavailable evidence; install only within authority.
 
 A cheap collection pass can expose hidden default selectors before expensive setup. Collection is not execution, and naming a file does not override every runner default.
@@ -13,6 +15,8 @@ A cheap collection pass can expose hidden default selectors before expensive set
 ## Derive the obligation population
 
 Read claims from owner requirements, specifications, public behavior, architecture, state transitions, incident history, compatibility promises, and deployment commitments. Label inferred risks and historical baselines distinctly. State the bounds, assumptions, and uninspected areas.
+
+Check criterion validity and protected qualities before treating improvement against the current metric as success. Where an operational promise depends on assembly, trace its real entry path and prerequisites as well as components. Where a report claims completion, inspect supporting results and their identities independently of that report.
 
 Trace material failures through the actual boundaries and histories. Include shared fixtures, configuration, generated inputs, and CI selectors where they can invalidate many tests. Explore interacting conditions when there is a causal reason for interaction; neither all combinations nor pairwise combinations are universal defaults.
 
@@ -25,6 +29,8 @@ Apply [potency.md](potency.md) to consequential evidence: validate the setup, tr
 The Python scanner can seed a small candidate list. Check its parsed-file, test-function, and error counts before using the result; its population is syntactic, not the runner's admitted tests. Manually inspect high-consequence tests and unsupported patterns regardless of candidate count.
 
 Prioritize findings that create false confidence: relevant faults surviving tests; unique evidence never selected; circular expectations or bypassed boundaries; flaky/unavailable evidence; then waste. Each finding names location, claim, delivered evidence, consequence, validation, and proposed disposition.
+
+Rank within that population by actual downstream consequence, including delays and unsafe workarounds caused by an overrestrictive apparatus. State whether a finding suggests a shared cause and a bounded sibling investigation, or supports local repair and stopping. An audit label or assigned reviewer posture does not prove which failure paths were actually examined.
 
 ## Seams and doubles
 
@@ -45,6 +51,8 @@ Delete as redundant only with an argument that surviving reachable evidence supp
 State the argument's fault families, inputs, state histories, and environmental bounds. Equal coverage, broader execution, and representative mutant kills alone cannot prove universal equivalence. Use mutants as supporting probes. If a material unique role remains uncertain, retain the evidence until a replacement demonstrates preservation of that role. Earlier removal requires explicit owner authorization to accept the named evidence gap; record that authorization and the outstanding obligation, not a claim of redundancy or readiness. Recording an obligation alone does not authorize deletion.
 
 Retiring a requirement is a different act from removing duplicate evidence. Cite owner authority for a requirement's retirement; a cheaper apparatus does not authorize changing what the product promises.
+
+Assess prevention and preserved capability alongside finding yield. No recent failures, low line coverage, or an uneventful audit alone cannot establish that a control has lost its function. Retire proven redundant temporary apparatus after retaining results needed for continuing diagnosis or reproduction; keep an archive only for a named continuing role.
 
 ## Attribute cost and execution gaps
 
