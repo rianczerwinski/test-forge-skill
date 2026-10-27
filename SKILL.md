@@ -2,6 +2,7 @@
 name: test-forge
 description: >-
   Calibrate, build, and refine software and workflow failure-detection machinery around real consequences, valid criteria, potent checks, and minimum total burden. Use when writing, running, reviewing, or refactoring tests or validators; designing assurance or closure checks; investigating slow, redundant, flaky, skipped, mock-heavy, or untrustworthy suites; asking whether assurance is enough or overbuilt, how serious an engineering failure is, when to stop testing, or whether a check detects real faults; or invoking pytest, jest, vitest, go test, cargo test, or another test runner. Use CALIBRATE to reground scope and rigor, FORGE for bounded test work, AUDIT for apparatus diagnosis, and REFORGE for redesign. Route whole-system assurance to Audit Planes.
+license: MIT
 ---
 
 # Test Forge
